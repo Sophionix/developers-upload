@@ -1,0 +1,64 @@
+# =============================================================================
+# Sophionix — Development Overrides
+# =============================================================================
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# Features:
+#   • Source code bind-mounts for hot-reload during development
+#   • Watch mode for Next.js dev server
+#   • Exposed app port (3000) directly for debugging without nginx
+#   • Worker auto-restart disabled to prevent crash loops on syntax errors
+# =============================================================================
+
+services:
+  app:
+    build:
+      target: builder
+    command: ["yarn", "dev"]
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      - type: bind
+        source: ./src
+        target: /app/src
+      - type: bind
+        source: ./public
+        target: /app/public
+      - type: bind
+        source: ./prisma
+        target: /app/prisma
+      # Preserve node_modules inside container
+      - type: volume
+        source: app_node_modules
+        target: /app/node_modules
+      - type: volume
+        source: app_next
+        target: /app/.next
+    environment:
+      NODE_ENV: development
+      # In dev we typically don't auto-migrate/seed on every container restart
+      SKIP_MIGRATE: "true"
+      SKIP_SEED: "true"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  worker:
+    profiles: []
+    restart: "no"
+    command: ["yarn", "worker:dev"]
+    volumes:
+      - type: bind
+        source: ./src
+        target: /app/src
+      - type: volume
+        source: app_node_modules
+        target: /app/node_modules
+
+volumes:
+  app_node_modules:
+  app_next:

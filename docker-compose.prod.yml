@@ -1,0 +1,52 @@
+# =============================================================================
+# Sophionix — Production Override (external managed database)
+# =============================================================================
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+#     --profile worker up -d --build
+#
+# Differences vs the base compose file:
+#   - app/worker no longer depend on the bundled `db` service (we use a
+#     managed MariaDB host). The `db` service itself is intentionally left
+#     in the base file; it simply has no dependents in production, so as
+#     long as no profile activates it, compose will not start it.
+#     (We do not need to delete it — `docker compose up` only starts
+#     services that are either named on the CLI, in the default profile,
+#     or required via depends_on.)
+#   - DATABASE_URL is supplied from .env and the inline override is left
+#     in the base file; the env-file value wins because we re-declare
+#     DATABASE_URL here pointing at ${DATABASE_URL} from .env.
+#   - DB_HOST is set so the entrypoint's `nc -z $DB_HOST $DB_PORT` probes
+#     the managed database instead of the in-cluster `db` hostname.
+# =============================================================================
+
+services:
+  # Bury the bundled MariaDB behind a profile so it never auto-starts in prod.
+  # The base file declares `db` unconditionally; assigning it a profile here
+  # means `docker compose up` will not start it unless --profile local-db
+  # is explicitly passed.
+  db:
+    profiles:
+      - local-db
+
+  app:
+    # !reset clears the inherited map first, then we redeclare without `db`.
+    # Requires Docker Compose >= 2.24 on the target host.
+    depends_on: !reset
+      redis:
+        condition: service_healthy
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT:-3306}
+      DATABASE_URL: ${DATABASE_URL}
+
+  worker:
+    depends_on: !reset
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT:-3306}
+      DATABASE_URL: ${DATABASE_URL}

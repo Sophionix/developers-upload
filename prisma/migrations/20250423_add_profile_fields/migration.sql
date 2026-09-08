@@ -1,0 +1,6 @@
+-- AlterTable: add profile fields to User
+ALTER TABLE `User` ADD COLUMN `dateOfBirth` DATE NULL;
+ALTER TABLE `User` ADD COLUMN `gender` VARCHAR(20) NULL;
+ALTER TABLE `User` ADD COLUMN `country` VARCHAR(4) NULL;
+ALTER TABLE `User` ADD COLUMN `state` VARCHAR(10) NULL;
+ALTER TABLE `User` ADD COLUMN `phone` VARCHAR(20) NULL;

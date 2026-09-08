@@ -1,0 +1,1026 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ============================================================================
+// Enums
+// ============================================================================
+
+enum UserRole {
+  USER
+  SUPER_ADMIN
+  CONTENT_MANAGER
+}
+
+enum AccountStatus {
+  ACTIVE
+  DEACTIVATED
+  PENDING_DELETION
+}
+
+enum ThemeMode {
+  LIGHT
+  DARK
+  AUTO
+}
+
+enum UiTone {
+  FRIENDLY
+  NEUTRAL
+  MOTIVATIONAL
+}
+
+enum NotifyChannel {
+  PUSH
+  EMAIL
+  BOTH
+  NONE
+}
+
+enum Mood {
+  JOYFUL
+  CALM
+  GRATEFUL
+  NEUTRAL
+  TIRED
+  ANXIOUS
+  SAD
+  ANGRY
+  STRESSED
+  HOPEFUL
+}
+
+enum CardAccessType {
+  FREE
+  PREMIUM
+}
+
+enum JourneyAccessType {
+  FREE
+  PREMIUM
+}
+
+enum SubscriptionTier {
+  FREE
+  TRIAL
+  PREMIUM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  UNPAID
+  INCOMPLETE
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentType {
+  SUBSCRIPTION
+  CARD_UNLOCK
+  REFUND
+}
+
+enum CouponType {
+  PERCENTAGE
+  FLAT
+}
+
+enum PlanVisibility {
+  PUBLIC
+  INTERNAL
+  TEST_ONLY
+}
+
+enum PromptType {
+  REFLECTION
+  GRATITUDE
+  AFFIRMATION
+  QUESTION
+}
+
+enum NotificationType {
+  PUSH
+  EMAIL
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+  FAILED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  GRANT
+  REVOKE
+  EXPORT
+  IMPORT
+  OVERRIDE
+}
+
+enum ExportFormat {
+  CSV
+  PDF
+}
+
+enum ExportStatus {
+  QUEUED
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum WebAuthnTransport {
+  USB
+  NFC
+  BLE
+  INTERNAL
+  HYBRID
+}
+
+// ============================================================================
+// Core auth & identity
+// ============================================================================
+
+model User {
+  id                     String        @id @default(cuid())
+  email                  String        @unique @db.VarChar(255)
+  emailVerifiedAt        DateTime?
+  passwordHash           String?       @db.VarChar(255)
+  fullName               String        @db.VarChar(120)
+  avatarUrl              String?       @db.VarChar(500)
+  dateOfBirth            DateTime?     @db.Date
+  gender                 String?       @db.VarChar(20)
+  country                String?       @db.VarChar(4)
+  state                  String?       @db.VarChar(10)
+  phone                  String?       @db.VarChar(20)
+  role                   UserRole      @default(USER)
+  status                 AccountStatus @default(ACTIVE)
+  timezone               String?       @db.VarChar(64)
+  locale                 String?       @db.VarChar(10)
+  consentTermsAt         DateTime?
+  hasCompletedOnboarding Boolean       @default(false)
+  stripeCustomerId       String?       @unique @db.VarChar(64)
+  totpSecretEnc          String?       @db.VarChar(255)
+  totpEnabled            Boolean       @default(false)
+  lastLoginAt            DateTime?
+  lastLoginIp            String?       @db.VarChar(64)
+  deletedAt              DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts           Account[]
+  sessions           Session[]
+  authenticators     Authenticator[]
+  preferences        UserPreference?
+  notificationPrefs  NotificationPreference?
+  fcmTokens          FcmToken[]
+  journalEntries     JournalEntry[]
+  moodCheckIns       MoodCheckIn[]
+  cardDraws          CardDraw[]
+  savedCards         SavedCard[]
+  cardUnlocks        CardUnlock[]
+  journeyEnrollments JourneyEnrollment[]
+  subscription       Subscription?
+  payments           Payment[]
+  exportRequests     ExportRequest[]
+  deletionRequest    DataDeletionRequest?
+  adminAuditLogs     AdminAuditLog[]          @relation("actor")
+  targetedAuditLogs  AdminAuditLog[]          @relation("target")
+  loginAttempts      LoginAttempt[]
+  passwordResets     PasswordResetToken[]
+  emailVerifications EmailVerificationToken[]
+
+  @@index([role, status])
+  @@index([deletedAt])
+  @@index([createdAt, id])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  provider          String  @db.VarChar(60)
+  providerAccountId String  @db.VarChar(255)
+  type              String  @db.VarChar(32)
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String? @db.VarChar(32)
+  scope             String? @db.VarChar(255)
+  id_token          String? @db.Text
+  session_state     String? @db.VarChar(255)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @db.VarChar(255)
+  userId       String
+  expires      DateTime
+  ip           String?  @db.VarChar(64)
+  userAgent    String?  @db.VarChar(255)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expires])
+}
+
+model VerificationToken {
+  identifier String   @db.VarChar(255)
+  token      String   @unique @db.VarChar(255)
+  expires    DateTime
+
+  @@id([identifier, token])
+  @@index([expires])
+}
+
+model Authenticator {
+  id           String    @id @default(cuid())
+  userId       String
+  credentialId String    @unique @db.VarChar(255)
+  publicKey    Bytes
+  counter      Int       @default(0)
+  transports   String?   @db.VarChar(60)
+  deviceName   String?   @db.VarChar(120)
+  lastUsedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique @db.VarChar(255)
+  expiresAt DateTime
+  usedAt    DateTime?
+  ip        String?   @db.VarChar(64)
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique @db.VarChar(255)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  userId    String?
+  email     String   @db.VarChar(255)
+  ip        String   @db.VarChar(64)
+  userAgent String?  @db.VarChar(255)
+  success   Boolean
+  reason    String?  @db.VarChar(120)
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([email, createdAt])
+  @@index([ip, createdAt])
+  @@index([userId, createdAt])
+}
+
+model AdminTotpChallenge {
+  id         String    @id @default(cuid())
+  userId     String
+  codeHash   String    @db.VarChar(255)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, expiresAt])
+}
+
+// ============================================================================
+// Guest sessions & unlocks
+// ============================================================================
+
+model GuestSession {
+  id               String    @id @default(cuid())
+  cookieHash       String    @unique @db.VarChar(255)
+  email            String?   @db.VarChar(255)
+  ip               String?   @db.VarChar(64)
+  userAgent        String?   @db.VarChar(255)
+  stripeCustomerId String?   @unique @db.VarChar(64)
+  claimedByUserId  String?
+  createdAt        DateTime  @default(now())
+  expiresAt        DateTime
+  claimedAt        DateTime?
+
+  unlocks  CardUnlock[]
+  payments Payment[]
+
+  @@index([email])
+  @@index([claimedByUserId])
+  @@index([expiresAt])
+}
+
+// ============================================================================
+// Preferences
+// ============================================================================
+
+model UserPreference {
+  userId          String    @id
+  theme           ThemeMode @default(AUTO)
+  accentColor     String?   @db.VarChar(16)
+  tone            UiTone    @default(NEUTRAL)
+  dailyCardAtHour Int?
+  updatedAt       DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model NotificationPreference {
+  userId           String        @id
+  remindersEnabled Boolean       @default(true)
+  channel          NotifyChannel @default(PUSH)
+  scheduleCron     String?       @db.VarChar(64)
+  weeklyNewsletter Boolean       @default(true)
+  promotional      Boolean       @default(false)
+  updatedAt        DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FcmToken {
+  id         String   @id @default(cuid())
+  userId     String
+  token      String   @unique @db.VarChar(500)
+  deviceId   String?  @db.VarChar(120)
+  platform   String?  @db.VarChar(30)
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ============================================================================
+// Content — cards, decks, prompts, journeys
+// ============================================================================
+
+model Deck {
+  id          String   @id @default(cuid())
+  slug        String   @unique @db.VarChar(80)
+  title       String   @db.VarChar(120)
+  description String?  @db.Text
+  coverUrl    String?  @db.VarChar(500)
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  cards Card[]
+
+  @@index([isActive, sortOrder])
+}
+
+model Theme {
+  id        String   @id @default(cuid())
+  slug      String   @unique @db.VarChar(60)
+  name      String   @db.VarChar(80)
+  createdAt DateTime @default(now())
+
+  cards   CardTheme[]
+  prompts PromptTheme[]
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  slug      String   @unique @db.VarChar(60)
+  name      String   @db.VarChar(80)
+  createdAt DateTime @default(now())
+
+  entries JournalEntryTag[]
+  cards   CardTag[]
+}
+
+model Card {
+  id           String         @id @default(cuid())
+  deckId       String
+  title        String         @db.VarChar(160)
+  message      String         @db.Text
+  prompt       String?        @db.Text
+  imageUrl     String?        @db.VarChar(500)
+  iconKey      String?        @db.VarChar(60)
+  accessType   CardAccessType @default(FREE)
+  guestPreview Boolean        @default(false)
+  isActive     Boolean        @default(true)
+  sortOrder    Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  deck           Deck                 @relation(fields: [deckId], references: [id], onDelete: Restrict)
+  themes         CardTheme[]
+  tags           CardTag[]
+  draws          CardDraw[]
+  saves          SavedCard[]
+  unlocks        CardUnlock[]
+  scheduled      ScheduledDailyCard[]
+  journeyDays    JourneyDay[]
+  journalEntries JournalEntry[]       @relation("JournalCard")
+  moodCheckIns   MoodCheckIn[]        @relation("MoodCard")
+
+  @@index([deckId, accessType, isActive])
+  @@index([accessType, isActive, sortOrder])
+  @@index([isActive, sortOrder, id])
+  @@index([guestPreview, isActive])
+}
+
+model CardTheme {
+  cardId  String
+  themeId String
+
+  card  Card  @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  theme Theme @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  @@id([cardId, themeId])
+  @@index([themeId])
+}
+
+model CardTag {
+  cardId String
+  tagId  String
+
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([cardId, tagId])
+  @@index([tagId])
+}
+
+model JournalPrompt {
+  id        String     @id @default(cuid())
+  text      String     @db.Text
+  type      PromptType @default(REFLECTION)
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  themes     PromptTheme[]
+  categories PromptCategory[]
+}
+
+model PromptTheme {
+  promptId String
+  themeId  String
+
+  prompt JournalPrompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  theme  Theme         @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  @@id([promptId, themeId])
+}
+
+model Category {
+  id   String @id @default(cuid())
+  slug String @unique @db.VarChar(60)
+  name String @db.VarChar(80)
+
+  prompts PromptCategory[]
+}
+
+model PromptCategory {
+  promptId   String
+  categoryId String
+
+  prompt   JournalPrompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  category Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([promptId, categoryId])
+}
+
+model Journey {
+  id           String            @id @default(cuid())
+  slug         String            @unique @db.VarChar(80)
+  title        String            @db.VarChar(160)
+  description  String            @db.Text
+  durationDays Int
+  accessType   JourneyAccessType @default(FREE)
+  thumbnailUrl String?           @db.VarChar(500)
+  isActive     Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  days        JourneyDay[]
+  enrollments JourneyEnrollment[]
+
+  @@index([accessType, isActive])
+}
+
+model JourneyDay {
+  id         String  @id @default(cuid())
+  journeyId  String
+  dayIndex   Int
+  cardId     String?
+  promptText String? @db.Text
+  quote      String? @db.Text
+  audioUrl   String? @db.VarChar(500)
+
+  journey Journey @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  card    Card?   @relation(fields: [cardId], references: [id], onDelete: SetNull)
+
+  @@unique([journeyId, dayIndex])
+  @@index([cardId])
+}
+
+model JourneyEnrollment {
+  id          String    @id @default(cuid())
+  userId      String
+  journeyId   String
+  startedAt   DateTime  @default(now())
+  currentDay  Int       @default(1)
+  completedAt DateTime?
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  journey Journey @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, journeyId])
+  @@index([userId, completedAt])
+}
+
+model ScheduledDailyCard {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  cardId    String
+  isGlobal  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@unique([date])
+  @@index([cardId])
+}
+
+// ============================================================================
+// Journal & mood
+// ============================================================================
+
+model JournalEntry {
+  id            String    @id @default(cuid())
+  userId        String
+  title         String?   @db.VarChar(200)
+  bodyHtml      String    @db.MediumText
+  bodyPlain     String    @db.MediumText
+  moodCheckInId String?   @unique
+  cardId        String?
+  drawId        String?   @unique
+  isDraft       Boolean   @default(false)
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moodCheckIn MoodCheckIn?          @relation(fields: [moodCheckInId], references: [id], onDelete: SetNull)
+  card        Card?                 @relation("JournalCard", fields: [cardId], references: [id], onDelete: SetNull)
+  draw        CardDraw?             @relation(fields: [drawId], references: [id], onDelete: SetNull)
+  tags        JournalEntryTag[]
+  voiceNotes  VoiceNote[]
+  versions    JournalEntryVersion[]
+
+  @@index([userId, deletedAt, createdAt])
+  @@index([userId, cardId])
+  @@index([userId, moodCheckInId])
+  @@fulltext([bodyPlain])
+}
+
+model JournalEntryVersion {
+  id        String   @id @default(cuid())
+  entryId   String
+  bodyHtml  String   @db.MediumText
+  createdAt DateTime @default(now())
+
+  entry JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([entryId, createdAt])
+}
+
+model JournalEntryTag {
+  entryId String
+  tagId   String
+
+  entry JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  tag   Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([entryId, tagId])
+  @@index([tagId])
+}
+
+model VoiceNote {
+  id          String   @id @default(cuid())
+  entryId     String
+  storagePath String   @db.VarChar(500)
+  durationMs  Int
+  mimeType    String   @db.VarChar(40)
+  sizeBytes   Int
+  createdAt   DateTime @default(now())
+
+  entry JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([entryId])
+}
+
+model MoodCheckIn {
+  id           String   @id @default(cuid())
+  userId       String
+  mood         Mood
+  note         String?  @db.VarChar(500)
+  linkedCardId String?
+  linkedDrawId String?
+  createdAt    DateTime @default(now())
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedCard   Card?         @relation("MoodCard", fields: [linkedCardId], references: [id], onDelete: SetNull)
+  linkedDraw   CardDraw?     @relation(fields: [linkedDrawId], references: [id], onDelete: SetNull)
+  journalEntry JournalEntry?
+
+  @@index([userId, createdAt])
+  @@index([mood, createdAt])
+}
+
+model CardDraw {
+  id        String   @id @default(cuid())
+  userId    String
+  cardId    String
+  source    String   @db.VarChar(20)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card Card @relation(fields: [cardId], references: [id], onDelete: Restrict)
+
+  journalEntry JournalEntry?
+  moodCheckIns MoodCheckIn[]
+
+  @@index([userId, createdAt])
+  @@index([cardId, createdAt])
+}
+
+model SavedCard {
+  userId    String
+  cardId    String
+  // Ties cards saved together in a single reading into one group so the Saved
+  // Cards page can show a 1- or 2-card draw as one unit. Null for legacy rows
+  // saved before grouping existed (each renders as its own single-card group).
+  savedGroupId String? @db.VarChar(36)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@id([userId, cardId])
+  @@index([cardId])
+  @@index([userId, savedGroupId])
+}
+
+// ============================================================================
+// Billing — subscriptions, unlocks, coupons
+// ============================================================================
+
+model PricingPlan {
+  id              String         @id @default(cuid())
+  slug            String         @unique @db.VarChar(60)
+  name            String         @db.VarChar(120)
+  description     String?        @db.Text
+  priceCents      Int
+  currency        String         @default("USD") @db.VarChar(3)
+  intervalMonths  Int
+  trialDays       Int            @default(0)
+  features        Json
+  visibility      PlanVisibility @default(PUBLIC)
+  stripePriceId   String?        @unique @db.VarChar(64)
+  stripeProductId String?        @db.VarChar(64)
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  subscriptions Subscription[]
+  coupons       Coupon[]
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  planId               String?
+  tier                 SubscriptionTier   @default(FREE)
+  status               SubscriptionStatus @default(ACTIVE)
+  stripeSubscriptionId String?            @unique @db.VarChar(64)
+  trialStart           DateTime?
+  trialEnd             DateTime?
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  canceledAt           DateTime?
+  grantedByAdminId     String?
+  grantExpiresAt       DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan PricingPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+
+  @@index([tier, status])
+  @@index([currentPeriodEnd])
+}
+
+model Coupon {
+  id              String     @id @default(cuid())
+  code            String     @unique @db.VarChar(40)
+  type            CouponType
+  percentOff      Int?
+  amountOffCents  Int?
+  currency        String     @default("USD") @db.VarChar(3)
+  startsAt        DateTime?
+  endsAt          DateTime?
+  maxRedemptions  Int?
+  redeemedCount   Int        @default(0)
+  appliesToPlanId String?
+  stripeCouponId  String?    @unique @db.VarChar(64)
+  isActive        Boolean    @default(true)
+  createdAt       DateTime   @default(now())
+
+  plan        PricingPlan?       @relation(fields: [appliesToPlanId], references: [id], onDelete: SetNull)
+  redemptions CouponRedemption[]
+
+  @@index([isActive, endsAt])
+}
+
+model CouponRedemption {
+  id        String   @id @default(cuid())
+  couponId  String
+  userId    String
+  paymentId String?
+  createdAt DateTime @default(now())
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@unique([couponId, userId])
+  @@index([userId])
+}
+
+model CardUnlock {
+  id                    String        @id @default(cuid())
+  userId                String?
+  guestSessionId        String?
+  cardId                String
+  priceCents            Int
+  currency              String        @default("USD") @db.VarChar(3)
+  stripePaymentIntentId String?       @unique @db.VarChar(64)
+  status                PaymentStatus @default(PENDING)
+  unlockedAt            DateTime?
+  createdAt             DateTime      @default(now())
+
+  user    User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guest   GuestSession? @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
+  card    Card          @relation(fields: [cardId], references: [id], onDelete: Restrict)
+  payment Payment?
+
+  @@unique([userId, cardId])
+  @@unique([guestSessionId, cardId])
+  @@index([cardId, status])
+  @@index([createdAt])
+}
+
+model Payment {
+  id                    String        @id @default(cuid())
+  userId                String?
+  guestSessionId        String?
+  cardUnlockId          String?       @unique
+  subscriptionId        String?
+  type                  PaymentType?
+  amountCents           Int
+  currency              String        @default("USD") @db.VarChar(3)
+  status                PaymentStatus @default(PENDING)
+  stripeStatus          String?       @db.VarChar(40)
+  failureReason         String?       @db.VarChar(255)
+  stripePaymentIntentId String?       @unique @db.VarChar(64)
+  stripeChargeId        String?       @unique @db.VarChar(64)
+  stripeInvoiceId       String?       @db.VarChar(64)
+  stripeCustomerId      String?       @db.VarChar(64)
+  receiptUrl            String?       @db.VarChar(500)
+  rawEvent              Json?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  user       User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guest      GuestSession? @relation(fields: [guestSessionId], references: [id], onDelete: SetNull)
+  cardUnlock CardUnlock?   @relation(fields: [cardUnlockId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([guestSessionId, createdAt])
+  @@index([status, createdAt])
+  @@index([stripeCustomerId])
+}
+
+model StripeWebhookEvent {
+  id          String    @id
+  type        String    @db.VarChar(80)
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+  error       String?   @db.Text
+
+  @@index([type, receivedAt])
+}
+
+// ============================================================================
+// Notifications, email campaigns
+// ============================================================================
+
+model NotificationTemplate {
+  id        String           @id @default(cuid())
+  slug      String           @unique @db.VarChar(80)
+  type      NotificationType
+  subject   String?          @db.VarChar(200)
+  title     String?          @db.VarChar(200)
+  body      String           @db.Text
+  variables Json
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  campaigns NotificationCampaign[]
+}
+
+model NotificationCampaign {
+  id               String           @id @default(cuid())
+  templateId       String
+  name             String           @db.VarChar(160)
+  type             NotificationType
+  segmentJson      Json
+  scheduledAt      DateTime?
+  sentAt           DateTime?
+  status           CampaignStatus   @default(DRAFT)
+  createdByAdminId String
+  stats            Json?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  template NotificationTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+
+  @@index([status, scheduledAt])
+}
+
+model NotificationDelivery {
+  id         String           @id @default(cuid())
+  campaignId String
+  userId     String
+  type       NotificationType
+  status     String           @db.VarChar(30)
+  providerId String?          @db.VarChar(120)
+  error      String?          @db.Text
+  createdAt  DateTime         @default(now())
+
+  @@index([campaignId, status])
+  @@index([userId, createdAt])
+}
+
+// ============================================================================
+// Exports, GDPR, audit, analytics rollups, system settings
+// ============================================================================
+
+model ExportRequest {
+  id          String       @id @default(cuid())
+  userId      String
+  scope       String       @db.VarChar(40)
+  format      ExportFormat
+  filters     Json?
+  status      ExportStatus @default(QUEUED)
+  fileUrl     String?      @db.VarChar(500)
+  expiresAt   DateTime?
+  createdAt   DateTime     @default(now())
+  completedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+model DataDeletionRequest {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  requestedAt DateTime  @default(now())
+  scheduledAt DateTime
+  processedAt DateTime?
+  reason      String?   @db.VarChar(500)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([scheduledAt, processedAt])
+}
+
+model AdminAuditLog {
+  id           String      @id @default(cuid())
+  actorId      String
+  action       AuditAction
+  entity       String      @db.VarChar(60)
+  entityId     String?     @db.VarChar(30)
+  targetUserId String?
+  meta         Json?
+  ip           String?     @db.VarChar(64)
+  createdAt    DateTime    @default(now())
+
+  actor  User  @relation("actor", fields: [actorId], references: [id], onDelete: Cascade)
+  target User? @relation("target", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorId, createdAt])
+  @@index([entity, entityId, createdAt])
+  @@index([action, createdAt])
+}
+
+model SystemSetting {
+  key       String   @id @db.VarChar(80)
+  value     Json
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
+
+model FeatureFlag {
+  key        String   @id @db.VarChar(80)
+  enabled    Boolean  @default(false)
+  rolloutPct Int      @default(0)
+  updatedAt  DateTime @updatedAt
+}
+
+model DailyUserStat {
+  date    DateTime @db.Date
+  userId  String
+  entries Int      @default(0)
+  moodAvg Float?
+  draws   Int      @default(0)
+  active  Boolean  @default(false)
+
+  @@id([date, userId])
+  @@index([userId, date])
+}
+
+model DailyPlatformStat {
+  date             DateTime @id @db.Date
+  newSignups       Int      @default(0)
+  dau              Int      @default(0)
+  wau              Int      @default(0)
+  mau              Int      @default(0)
+  draws            Int      @default(0)
+  entries          Int      @default(0)
+  paidConversions  Int      @default(0)
+  revenueCents     Int      @default(0)
+  churnCount       Int      @default(0)
+  moodDistribution Json
+}
+
+model RetentionCohort {
+  cohortDate DateTime @db.Date
+  dayOffset  Int
+  size       Int
+  retained   Int
+
+  @@id([cohortDate, dayOffset])
+}
+
+model CardUsageStat {
+  date    DateTime @db.Date
+  cardId  String
+  draws   Int      @default(0)
+  saves   Int      @default(0)
+  unlocks Int      @default(0)
+
+  @@id([date, cardId])
+  @@index([cardId, date])
+}

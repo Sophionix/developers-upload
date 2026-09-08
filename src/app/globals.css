@@ -1,0 +1,235 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+ * Sophionix design tokens — Tailwind v4 @theme.
+ * Two-layer system:
+ *   1. Semantic roles (primary, muted, card, …) — use these in components.
+ *   2. Raw brand scale (brand-500/700/900, accent-gold) — use only for intentional brand moments.
+ * Dark-only. No light theme will be shipped.
+ */
+@theme {
+  /* ── Semantic colors ─────────────────────────────────────── */
+  --color-background: #000000;
+  --color-foreground: #ffffff;
+
+  --color-card: rgba(26, 1, 1, 0.58);
+  --color-card-foreground: #ffffff;
+
+  --color-popover: #0a0505;
+  --color-popover-foreground: #ffffff;
+
+  --color-primary: #E55805;
+  --color-primary-foreground: #ffffff;
+
+  --color-link: #E36D11;
+  --color-link-hover: #ff8533;
+  /* Figma dashboard (0:1099) — “View All” */
+  --color-view-all: #efa315;
+
+  --color-secondary: #8b4e00;
+  --color-secondary-foreground: #ffffff;
+
+  --color-table-header: #B44F00;
+
+  --color-surface: rgba(255, 255, 255, 0.05);
+  --color-surface-subtle: rgba(255, 255, 255, 0.02);
+
+  --color-muted: rgba(255, 255, 255, 0.08);
+  --color-muted-foreground: rgba(255, 255, 255, 0.7);
+
+  --color-accent: #ffec00;
+  --color-accent-foreground: #210102;
+
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-info: #3b82f6;
+
+  --color-border: rgba(255, 255, 255, 0.28);
+  --color-border-muted: rgba(255, 255, 255, 0.5);
+  --color-input: rgba(255, 255, 255, 0.28);
+  --color-ring: #c87a02;
+
+  /* ── Raw brand scale ─────────────────────────────────────── */
+  --color-brand-50: #fff3e0;
+  --color-brand-100: #ffe0b2;
+  --color-brand-300: #ffb74d;
+  --color-brand-500: #c87a02;
+  --color-brand-700: #8b4e00;
+  --color-brand-900: #210102;
+  /** Rail / chrome — deep red–ember at bottom (less yellow than pure orange) */
+  --color-rail-ember: #922b18;
+
+  /* ── Radii ───────────────────────────────────────────────── */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 21px;
+  --radius-pill: 30px;
+  --radius-nav: 50px;
+
+  /* ── Shadows ─────────────────────────────────────────────── */
+  --shadow-elevated: 0 4px 34px rgba(0, 0, 0, 0.15);
+  --shadow-glow-brand: 0 0 24px rgba(200, 122, 2, 0.35);
+  --shadow-glow-accent: 0 0 18px rgba(255, 236, 0, 0.4);
+
+  /* ── Fonts ───────────────────────────────────────────────── */
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-jomolhari), serif;
+
+  /* ── Motion ──────────────────────────────────────────────── */
+  --ease-brand: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --duration-card-flip: 700ms;
+  --duration-micro: 150ms;
+  --duration-standard: 250ms;
+  --duration-slow: 450ms;
+
+  /* ── Keyframe-backed animations (used by Radix Accordion, etc.) */
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+}
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+/* Force dark — no light theme shipped. */
+html,
+:root {
+  color-scheme: dark;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Focus ring — brand-colored, a11y mandatory (WCAG 2.1). */
+*:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Selection matches brand. */
+::selection {
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+
+/* Respect reduced-motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Thin scrollbar to match dark aesthetic. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-muted);
+}
+
+/*
+ * Brand signature utilities — use deliberately, not ad-hoc.
+ * bg-lava-texture : the Sophionix lava-crack overlay (apply via <LavaBackground/>).
+ * bg-brand-grad   : burnt-orange → maroon signature gradient (sidebar, primary CTA hero).
+ * bg-rail-grad    : vertical maroon → ember, anchored by --color-rail-ember at bottom (sidebar + topbar).
+ * bg-image-fade   : top+bottom darken overlay for hero media.
+ */
+@layer utilities {
+  .bg-lava-texture {
+    background-image: url("/textures/lava-crack.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  .bg-brand-grad {
+    background-image: linear-gradient(
+      37.7deg,
+      var(--color-brand-500) 21%,
+      var(--color-brand-900) 86%
+    );
+  }
+
+  /** Sophionix rail — maroon above, red–ember (--color-rail-ember) anchored at bottom */
+  .bg-rail-grad {
+    background-image: linear-gradient(
+      180deg,
+      var(--color-brand-900) 0%,
+      #100202 14%,
+      #180305 28%,
+      #28050a 44%,
+      #3f0a0e 58%,
+      #5c100f 72%,
+      #721511 84%,
+      var(--color-rail-ember) 94%,
+      var(--color-rail-ember) 100%
+    );
+  }
+
+  .bg-image-fade {
+    background-image: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.6) 0%,
+      transparent 62.5%,
+      rgba(0, 0, 0, 0.6) 100%
+    );
+  }
+
+  .bg-btn-brand {
+    background-image: url("/button-bg.png");
+    background-size: cover;
+    background-position: center;
+  }
+
+  .bg-btn-danger {
+    background-image: url("/red-bg.png");
+    background-size: cover;
+    background-position: center;
+  }
+}

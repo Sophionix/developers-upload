@@ -1,0 +1,341 @@
+# =============================================================================
+# Sophionix — Production Docker Compose
+# =============================================================================
+# Usage:
+#   docker compose up -d              # Start all core services
+#   docker compose up -d --build      # Rebuild images & start
+#   docker compose logs -f app        # Tail app logs
+#   docker compose --profile worker up -d   # Start with worker service
+#
+# Environment:
+#   Copy .env.example → .env and configure before starting.
+#   Compose automatically reads .env and injects values via ${VAR} syntax.
+# =============================================================================
+
+name: sophionix
+
+services:
+  # ---------------------------------------------------------------------------
+  # MariaDB — Primary Data Store
+  # ---------------------------------------------------------------------------
+  db:
+    image: mariadb:11
+    container_name: sophionix-db
+    restart: unless-stopped
+    init: true
+
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-sophionix_root}
+      MARIADB_DATABASE: ${DB_NAME:-sophionix}
+      MARIADB_USER: ${DB_USER:-sophionix}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-sophionix_dev}
+      MARIADB_CHARACTER_SET_SERVER: utf8mb4
+      MARIADB_COLLATE_SERVER: utf8mb4_unicode_ci
+
+    volumes:
+      - type: volume
+        source: db_data
+        target: /var/lib/mysql
+
+    ports:
+      - target: 3306
+        published: ${DB_PORT:-3306}
+        protocol: tcp
+
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    networks:
+      - sophionix-backend
+
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service_name,environment"
+
+    # Security hardening where possible
+    security_opt:
+      - no-new-privileges:true
+
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  # ---------------------------------------------------------------------------
+  # Redis — Cache, Sessions, Rate-Limiting, Job Queue
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: sophionix-redis
+    restart: unless-stopped
+    init: true
+
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+      --save 300 100
+      --save 900 1
+
+    volumes:
+      - type: volume
+        source: redis_data
+        target: /data
+
+    ports:
+      - target: 6379
+        published: ${REDIS_PORT:-6379}
+        protocol: tcp
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+    networks:
+      - sophionix-backend
+
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    security_opt:
+      - no-new-privileges:true
+
+  # ---------------------------------------------------------------------------
+  # App — Next.js Production Server (Standalone)
+  # ---------------------------------------------------------------------------
+  # On startup this container:
+  #   1. Waits for MariaDB to be reachable
+  #   2. Runs `prisma migrate deploy`
+  #   3. Runs `prisma db seed`
+  #   4. Starts the Next.js standalone server
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    container_name: sophionix-app
+    restart: unless-stopped
+    init: true
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    env_file:
+      - .env
+
+    environment:
+      NODE_ENV: production
+      DB_HOST: db
+      DB_PORT: "3306"
+      DATABASE_URL: mysql://${DB_USER:-sophionix}:${DB_PASSWORD:-sophionix_dev}@db:3306/${DB_NAME:-sophionix}?connection_limit=10
+      REDIS_URL: redis://redis:6379
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost}
+      # Control migration / seed behaviour
+      SKIP_MIGRATE: ${SKIP_MIGRATE:-}
+      SKIP_SEED: ${SKIP_SEED:-}
+      DB_WAIT_TIMEOUT: "60"
+
+    expose:
+      - "3000"
+
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100m
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+
+    networks:
+      - sophionix-backend
+      - sophionix-frontend
+
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+        labels: "service_name,environment"
+
+    security_opt:
+      - no-new-privileges:true
+
+  # ---------------------------------------------------------------------------
+  # Worker — Background Job Processor
+  # ---------------------------------------------------------------------------
+  # Uses the builder stage (full source + node_modules + tsx) because
+  # workers are executed directly via TypeScript.
+  # Activate with: docker compose --profile worker up -d
+  # ---------------------------------------------------------------------------
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: sophionix-worker
+    restart: unless-stopped
+    init: true
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+
+    env_file:
+      - .env
+
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: mysql://${DB_USER:-sophionix}:${DB_PASSWORD:-sophionix_dev}@db:3306/${DB_NAME:-sophionix}?connection_limit=5
+      REDIS_URL: redis://redis:6379
+
+    command: ["yarn", "worker:start"]
+
+    networks:
+      - sophionix-backend
+
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    security_opt:
+      - no-new-privileges:true
+
+    profiles:
+      - worker
+
+  # ---------------------------------------------------------------------------
+  # Nginx — Reverse Proxy, Gzip, Static Caching, TLS Termination
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: sophionix-nginx
+    restart: unless-stopped
+    init: true
+
+    depends_on:
+      app:
+        condition: service_healthy
+
+    ports:
+      - target: 80
+        published: ${HTTP_PORT:-80}
+        protocol: tcp
+      # Uncomment for HTTPS
+      # - target: 443
+      #   published: ${HTTPS_PORT:-443}
+      #   protocol: tcp
+
+    volumes:
+      - type: bind
+        source: ./nginx/nginx.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+
+    networks:
+      - sophionix-frontend
+
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+        reservations:
+          cpus: "0.1"
+          memory: 32M
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    security_opt:
+      - no-new-privileges:true
+
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:noexec,nosuid,size=50m
+      - /var/run:noexec,nosuid,size=10m
+      - /tmp:noexec,nosuid,size=10m
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  sophionix-backend:
+    driver: bridge
+  sophionix-frontend:
+    driver: bridge
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  db_data:
+    driver: local
+  redis_data:
+    driver: local

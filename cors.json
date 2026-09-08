@@ -1,0 +1,12 @@
+[
+  {
+    "origin": ["http://localhost:3000", "http://localhost:3001", "https://sophionix.com"],
+    "method": ["GET", "PUT", "POST", "HEAD"],
+    "responseHeader": [
+      "Content-Type",
+      "x-goog-content-length-range",
+      "Content-Length"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]
