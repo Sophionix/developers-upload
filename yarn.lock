@@ -3756,6 +3756,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/react-is@npm:^19":
+  version: 19.3.0
+  resolution: "@types/react-is@npm:19.3.0"
+  dependencies:
+    "@types/react": "npm:*"
+  checksum: 10c0/57391be255f8af062eed4c538d77f053a6479f5011cc68ac0c6fb75e5bec7a31b9e6e92ba58bfd069d928a8c400908c869574c8a6e88e0f6266057ef59c13adb
+  languageName: node
+  linkType: hard
+
+"@types/react@npm:*":
+  version: 19.3.0
+  resolution: "@types/react@npm:19.3.0"
+  dependencies:
+    csstype: "npm:^3.2.2"
+  checksum: 10c0/fbcabf303f935ca9f36ed2dcf81751cf84744098c5a683c8a62a0fa7edd31714b48d5c46b12fd0014f7f2dfe4d9ec6de428a850748eec719a70294e51029551b
+  languageName: node
+  linkType: hard
+
 "@types/react@npm:^19":
   version: 19.2.15
   resolution: "@types/react@npm:19.2.15"
@@ -8353,6 +8371,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-is@npm:^19.3.0":
+  version: 19.3.0
+  resolution: "react-is@npm:19.3.0"
+  checksum: 10c0/99b16fc1009222ec0bbe05286566c865908430778ea6ba90dd418c7a11594c6cbb8db58432735b9203e3c6463e3eef5a399df1317ee2d75fd96b3a88cfaa662e
+  languageName: node
+  linkType: hard
+
 "react-redux@npm:8.x.x || 9.x.x":
   version: 9.3.0
   resolution: "react-redux@npm:9.3.0"
@@ -9005,6 +9030,7 @@ __metadata:
     "@types/pdfkit": "npm:^0.17.6"
     "@types/react": "npm:^19"
     "@types/react-dom": "npm:^19"
+    "@types/react-is": "npm:^19"
     "@types/zxcvbn": "npm:^4"
     bcryptjs: "npm:^3.0.3"
     clsx: "npm:^2.1.1"
@@ -9026,6 +9052,7 @@ __metadata:
     prisma: "npm:^7.7.0"
     react: "npm:19.2.4"
     react-dom: "npm:19.2.4"
+    react-is: "npm:^19.3.0"
     recharts: "npm:^3.8.1"
     sonner: "npm:^2.0.7"
     stripe: "npm:^22.0.1"

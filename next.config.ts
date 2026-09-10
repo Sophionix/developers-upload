@@ -65,6 +65,9 @@ const serverActionsAllowedOrigins = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  turbopack: {
+    root: process.cwd(),
+  },
   serverExternalPackages: ["mariadb"],
   experimental: {
     serverActions: {
