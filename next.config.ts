@@ -64,7 +64,7 @@ const serverActionsAllowedOrigins = [
 ];
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // removed `output: "standalone"` so Vercel can build & serve the app
   serverExternalPackages: ["mariadb"],
   experimental: {
     serverActions: {
