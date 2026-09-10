@@ -1,0 +1,5 @@
+{
+  "buildCommand": "yarn build",
+  "outputDirectory": ".next",
+  "env": ["DATABASE_URL", "AUTH_SECRET", "NEXTAUTH_URL"]
+}
