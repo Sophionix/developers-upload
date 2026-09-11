@@ -63,8 +63,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!rlUser.ok) return NextResponse.json({ error: "RATE_LIMITED" }, { status: 429 });
 
   const credential = {
-    id: authenticator.credentialId,
-    publicKey: new Uint8Array(authenticator.publicKey),
+    credentialID: Buffer.from(authenticator.credentialId, "base64url"),
+    credentialPublicKey: new Uint8Array(authenticator.publicKey),
     counter: authenticator.counter,
     ...(authenticator.transports
       ? { transports: authenticator.transports.split(",").filter(Boolean) as never }

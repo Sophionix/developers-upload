@@ -22,39 +22,26 @@ const floatString = (fallback?: number) => {
 };
 
 const envSchema = z.object({
-  // -- Runtime ----------------------------------------------------------------
-  NODE_ENV: z
-    .enum(["development", "test", "production"])
-    .default("development"),
+  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   NEXT_PUBLIC_APP_URL: z.string().url(),
 
-  // -- Database ---------------------------------------------------------------
   DATABASE_URL: z.string().min(1),
-
-  // -- Redis (optional — falls back to in-memory store when absent) ----------
   REDIS_URL: z.string().url().optional(),
 
-  // -- Auth.js v5 -------------------------------------------------------------
   AUTH_SECRET: z.string().min(16),
   AUTH_TRUST_HOST: boolish(true),
 
-  // -- Admin 2FA / crypto -----------------------------------------------------
   TOTP_SECRET_KEY: z.string().min(16),
   TOTP_ISSUER: z.string().min(1),
 
-  // -- WebAuthn ---------------------------------------------------------------
   WEBAUTHN_RP_ID: z.string().min(1),
   WEBAUTHN_RP_NAME: z.string().min(1),
   WEBAUTHN_ORIGIN: z.string().url(),
   FEATURE_WEBAUTHN: boolish(true),
 
-  // -- reCAPTCHA v3 -----------------------------------------------------------
   RECAPTCHA_SECRET_KEY: z.string().min(1),
   RECAPTCHA_MIN_SCORE: floatString(0.5),
 
-  // -- Stripe -----------------------------------------------------------------
-   // Stripe is optional for deployments that do not use payments.
-  // Missing Stripe envs should not break builds; runtime code still guards access.
   STRIPE_SECRET_KEY: z.string().min(1).optional(),
   STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
   STRIPE_API_VERSION: z.string().min(1).default("2023-08-16"),
@@ -63,17 +50,15 @@ const envSchema = z.object({
   STRIPE_CHECKOUT_SUCCESS_URL: z.string().url().optional(),
   STRIPE_CHECKOUT_CANCEL_URL: z.string().url().optional(),
 
-  // -- Firebase (server — retained for FCM push messaging only) ---------------
   FIREBASE_SERVICE_ACCOUNT_JSON: z.string().min(1).optional(),
   FIREBASE_STORAGE_BUCKET: z.string().min(1).optional(),
 
-  // -- Upload limits ----------------------------------------------------------
   UPLOAD_MAX_AVATAR_BYTES: intString(5242880),
   UPLOAD_MAX_CARD_ART_BYTES: intString(8388608),
   UPLOAD_MAX_VOICE_BYTES: intString(8388608),
   UPLOAD_MAX_VOICE_DURATION_MS: intString(1200000),
+  UPLOAD_URL_TTL: intString(900),
 
-  // -- Email (optional until SMTP credentials are configured) -----------------
   EMAIL_FROM: z.string().min(1).optional(),
   EMAIL_REPLY_TO: z.string().min(1).optional(),
   SMTP_HOST: z.string().min(1).optional(),
@@ -83,15 +68,24 @@ const envSchema = z.object({
   SMTP_PASSWORD: z.string().min(1).optional(),
   MAILER_TRANSPORT: z.enum(["smtp", "ses", "stream"]).default("smtp"),
 
-  // -- Cron -------------------------------------------------------------------
   CRON_SECRET: z.string().min(1),
-
-  // -- GDPR -------------------------------------------------------------------
   GDPR_DELETION_GRACE_DAYS: intString(30),
 
-  // -- Guest sessions ---------------------------------------------------------
   GUEST_SESSION_SECRET: z.string().min(16),
   GUEST_SESSION_TTL_DAYS: intString(30),
+
+  S3_BUCKET: z.string().min(1).optional(),
+  S3_REGION: z.string().min(1).optional(),
+  S3_ACCESS_URL: z.string().url().optional(),
+
+  AUTH_GOOGLE_ID: z.string().min(1).optional(),
+  AUTH_GOOGLE_SECRET: z.string().min(1).optional(),
+  AUTH_APPLE_ID: z.string().min(1).optional(),
+  AUTH_APPLE_TEAM_ID: z.string().min(1).optional(),
+  AUTH_APPLE_KEY_ID: z.string().min(1).optional(),
+  AUTH_APPLE_PRIVATE_KEY: z.string().min(1).optional(),
+
+  NEXT_PUBLIC_FIREBASE_VAPID_KEY: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
