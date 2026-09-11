@@ -53,8 +53,7 @@ const envSchema = z.object({
   RECAPTCHA_MIN_SCORE: floatString(0.5),
 
   // -- Stripe -----------------------------------------------------------------
-   // Stripe is optional for deployments that do not use payments.
-  // Missing Stripe envs should not break builds; runtime code still guards access.
+  // Stripe is optional for deployments that do not use payments.
   STRIPE_SECRET_KEY: z.string().min(1).optional(),
   STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
   STRIPE_API_VERSION: z.string().min(1).default("2023-08-16"),
@@ -63,11 +62,17 @@ const envSchema = z.object({
   STRIPE_CHECKOUT_SUCCESS_URL: z.string().url().optional(),
   STRIPE_CHECKOUT_CANCEL_URL: z.string().url().optional(),
 
+  // -- AWS S3 storage (card art, avatars, voice notes) ------------------------
+  S3_REGION: z.string().min(1).optional(),
+  S3_BUCKET: z.string().min(1).optional(),
+  S3_ACCESS_URL: z.string().url().optional(),
+
   // -- Firebase (server — retained for FCM push messaging only) ---------------
   FIREBASE_SERVICE_ACCOUNT_JSON: z.string().min(1).optional(),
   FIREBASE_STORAGE_BUCKET: z.string().min(1).optional(),
 
   // -- Upload limits ----------------------------------------------------------
+  UPLOAD_URL_TTL: intString(300),
   UPLOAD_MAX_AVATAR_BYTES: intString(5242880),
   UPLOAD_MAX_CARD_ART_BYTES: intString(8388608),
   UPLOAD_MAX_VOICE_BYTES: intString(8388608),

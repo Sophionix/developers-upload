@@ -27,10 +27,22 @@ function looksLikePlaceholder(key: string): boolean {
   return /placeholder|CHANGE_ME/i.test(key);
 }
 
+function requireStripeEnvValue(
+  value: string | undefined,
+  name: string,
+): string {
+  const normalized = value ?? "";
+  if (looksLikePlaceholder(normalized)) {
+    throw new StripeNotConfiguredError(
+      `Stripe is not configured. Set ${name} in .env.`,
+    );
+  }
+  return normalized;
+}
+
 export function getStripe(): Stripe {
   if (cached) return cached;
-  const key = env.STRIPE_SECRET_KEY ?? "";
-  if (looksLikePlaceholder(key)) throw new StripeNotConfiguredError();
+  const key = requireStripeEnvValue(env.STRIPE_SECRET_KEY, "STRIPE_SECRET_KEY");
   cached = new Stripe(key, {
     apiVersion: (env.STRIPE_API_VERSION ?? "2023-08-16") as StripeApiVersion,
   });
@@ -42,11 +54,31 @@ export function verifyWebhookSignature(
   sigHeader: string,
 ): Stripe.Event {
   const stripe = getStripe();
+  const webhookSecret = requireStripeEnvValue(
+    env.STRIPE_WEBHOOK_SECRET,
+    "STRIPE_WEBHOOK_SECRET",
+  );
   return stripe.webhooks.constructEvent(
     rawBody,
     sigHeader,
-    env.STRIPE_WEBHOOK_SECRET,
+    webhookSecret,
   );
+}
+
+export function getStripeCheckoutUrls(): {
+  successUrl: string;
+  cancelUrl: string;
+} {
+  return {
+    successUrl: requireStripeEnvValue(
+      env.STRIPE_CHECKOUT_SUCCESS_URL,
+      "STRIPE_CHECKOUT_SUCCESS_URL",
+    ),
+    cancelUrl: requireStripeEnvValue(
+      env.STRIPE_CHECKOUT_CANCEL_URL,
+      "STRIPE_CHECKOUT_CANCEL_URL",
+    ),
+  };
 }
 
 export async function getOrCreateStripeCustomer(opts: {

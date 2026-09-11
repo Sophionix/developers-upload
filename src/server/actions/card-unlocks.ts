@@ -9,7 +9,11 @@ import {
   NotFoundError,
   RateLimitedError,
 } from "@/lib/errors";
-import { getStripe, getOrCreateStripeCustomer } from "@/lib/stripe";
+import {
+  getStripe,
+  getOrCreateStripeCustomer,
+  getStripeCheckoutUrls,
+} from "@/lib/stripe";
 import {
   createCardUnlockCheckoutSchema,
   type CreateCardUnlockCheckoutInput,
@@ -104,6 +108,7 @@ export async function createCardUnlockCheckout(
       });
 
   const stripe = getStripe();
+  const { successUrl, cancelUrl } = getStripeCheckoutUrls();
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     line_items: [
@@ -120,8 +125,8 @@ export async function createCardUnlockCheckout(
         quantity: 1,
       },
     ],
-    success_url: env.STRIPE_CHECKOUT_SUCCESS_URL,
-    cancel_url: env.STRIPE_CHECKOUT_CANCEL_URL,
+    success_url: successUrl,
+    cancel_url: cancelUrl,
     client_reference_id: user.id,
     customer: stripeCustomerId,
     payment_intent_data: {
