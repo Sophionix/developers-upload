@@ -37,7 +37,7 @@ FROM base AS deps
 WORKDIR /app
 
 # Copy package manager manifests first (maximises layer cache hits)
-COPY package.json yarn.lock .yarnrc.yml ./
+COPY package.json yarn.lock ./
 
 # Install dependencies with immutable lockfile.
 # Uses BuildKit cache mount for Yarn's global cache.
