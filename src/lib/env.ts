@@ -53,14 +53,15 @@ const envSchema = z.object({
   RECAPTCHA_MIN_SCORE: floatString(0.5),
 
   // -- Stripe -----------------------------------------------------------------
-  STRIPE_SECRET_KEY: z.string().min(1),
-  STRIPE_WEBHOOK_SECRET: z.string().min(1),
-  STRIPE_API_VERSION: z.string().min(1),
+  // Stripe is optional for deployments that do not use payments.
+  // Missing Stripe envs should not break builds; runtime code still guards access.
+  STRIPE_SECRET_KEY: z.string().min(1).optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
+  STRIPE_API_VERSION: z.string().min(1).default("2023-08-16"),
   CARD_UNLOCK_PRICE_CENTS: intString(199),
-  CARD_UNLOCK_CURRENCY: z.string().length(3),
-  STRIPE_CHECKOUT_SUCCESS_URL: z.string().url(),
-  STRIPE_CHECKOUT_CANCEL_URL: z.string().url(),
-
+  CARD_UNLOCK_CURRENCY: z.string().length(3).default("USD"),
+  STRIPE_CHECKOUT_SUCCESS_URL: z.string().url().optional(),
+  STRIPE_CHECKOUT_CANCEL_URL: z.string().url().optional(),
   // -- AWS S3 storage (card art, avatars, voice notes) ------------------------
   // Credentials come from the AWS default chain (IAM role / ~/.aws), NEVER env.
   // S3_ACCESS_URL is the CloudFront read URL; direct S3 access is blocked.
