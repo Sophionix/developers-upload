@@ -3,10 +3,8 @@ import {
   verifyRegistrationResponse,
   generateAuthenticationOptions,
   verifyAuthenticationResponse,
-  type AuthenticatorTransportFuture,
   type VerifiedRegistrationResponse,
   type VerifiedAuthenticationResponse,
-  type WebAuthnCredential,
 } from "@simplewebauthn/server";
 import { redis } from "@/lib/redis";
 import { env } from "@/lib/env";
@@ -17,6 +15,22 @@ const challengeKey = (owner: string) => `webauthn:chal:${owner}`;
 interface ExistingAuthenticator {
   credentialId: string;
   transports?: string | null;
+}
+
+type AuthenticatorTransport =
+  | "usb"
+  | "nfc"
+  | "ble"
+  | "internal"
+  | "hybrid"
+  | "cable"
+  | "smart-card";
+
+interface WebAuthnAuthenticator {
+  credentialID: Uint8Array;
+  credentialPublicKey: Uint8Array;
+  counter: number;
+  transports?: AuthenticatorTransport[];
 }
 
 export async function storeChallenge(
@@ -46,12 +60,12 @@ const VALID_TRANSPORTS = [
 
 function parseTransports(
   csv?: string | null,
-): AuthenticatorTransportFuture[] | undefined {
+): AuthenticatorTransport[] | undefined {
   if (!csv) return undefined;
   return csv
     .split(",")
     .map((s) => s.trim().toLowerCase())
-    .filter((s): s is AuthenticatorTransportFuture =>
+    .filter((s): s is AuthenticatorTransport =>
       (VALID_TRANSPORTS as readonly string[]).includes(s),
     );
 }
@@ -62,18 +76,19 @@ export async function generateRegistration(user: {
   email: string;
   existingAuthenticators: ExistingAuthenticator[];
 }) {
-  // userID: WebAuthn requires Uint8Array; encode user.id
-  const userID = new TextEncoder().encode(user.id);
   return generateRegistrationOptions({
     rpName: env.WEBAUTHN_RP_NAME,
     rpID: env.WEBAUTHN_RP_ID,
     userName: user.email,
     userDisplayName: user.name,
-    userID,
+    userID: user.id,
     attestationType: "none",
     excludeCredentials: user.existingAuthenticators.map((a) => {
       const transports = parseTransports(a.transports);
-      return transports ? { id: a.credentialId, transports } : { id: a.credentialId };
+      const id = new Uint8Array(Buffer.from(a.credentialId, "base64url"));
+      return transports
+        ? { id, type: "public-key" as const, transports }
+        : { id, type: "public-key" as const };
     }),
     authenticatorSelection: {
       residentKey: "preferred",
@@ -103,14 +118,17 @@ export async function generateAuthentication(
     userVerification: "preferred",
     allowCredentials: allowCredentials.map((c) => {
       const transports = parseTransports(c.transports);
-      return transports ? { id: c.credentialId, transports } : { id: c.credentialId };
+      const id = new Uint8Array(Buffer.from(c.credentialId, "base64url"));
+      return transports
+        ? { id, type: "public-key" as const, transports }
+        : { id, type: "public-key" as const };
     }),
   });
 }
 
 export async function verifyAuthentication(
   expectedChallenge: string,
-  credential: WebAuthnCredential,
+  authenticator: WebAuthnAuthenticator,
   body: Parameters<typeof verifyAuthenticationResponse>[0]["response"],
 ): Promise<VerifiedAuthenticationResponse> {
   return verifyAuthenticationResponse({
@@ -118,7 +136,7 @@ export async function verifyAuthentication(
     expectedChallenge,
     expectedOrigin: env.WEBAUTHN_ORIGIN,
     expectedRPID: env.WEBAUTHN_RP_ID,
-    credential,
+    authenticator,
     requireUserVerification: false,
   });
 }

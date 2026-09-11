@@ -20,6 +20,16 @@ export class StripeNotConfiguredError extends Error {
   }
 }
 
+function requireConfiguredString(
+  value: string | undefined,
+  message: string,
+): string {
+  if (!value || looksLikePlaceholder(value)) {
+    throw new StripeNotConfiguredError(message);
+  }
+  return value;
+}
+
 let cached: Stripe | undefined;
 
 function looksLikePlaceholder(key: string): boolean {
@@ -29,12 +39,30 @@ function looksLikePlaceholder(key: string): boolean {
 
 export function getStripe(): Stripe {
   if (cached) return cached;
-  const key = env.STRIPE_SECRET_KEY ?? "";
-  if (looksLikePlaceholder(key)) throw new StripeNotConfiguredError();
+  const key = requireConfiguredString(
+    env.STRIPE_SECRET_KEY,
+    "Stripe is not configured. Set STRIPE_SECRET_KEY in .env.",
+  );
   cached = new Stripe(key, {
     apiVersion: (env.STRIPE_API_VERSION ?? "2023-08-16") as StripeApiVersion,
   });
   return cached;
+}
+
+export function getStripeCheckoutUrls(): {
+  successUrl: string;
+  cancelUrl: string;
+} {
+  return {
+    successUrl: requireConfiguredString(
+      env.STRIPE_CHECKOUT_SUCCESS_URL,
+      "Stripe is not configured. Set STRIPE_CHECKOUT_SUCCESS_URL in .env.",
+    ),
+    cancelUrl: requireConfiguredString(
+      env.STRIPE_CHECKOUT_CANCEL_URL,
+      "Stripe is not configured. Set STRIPE_CHECKOUT_CANCEL_URL in .env.",
+    ),
+  };
 }
 
 export function verifyWebhookSignature(
@@ -45,7 +73,10 @@ export function verifyWebhookSignature(
   return stripe.webhooks.constructEvent(
     rawBody,
     sigHeader,
-    env.STRIPE_WEBHOOK_SECRET,
+    requireConfiguredString(
+      env.STRIPE_WEBHOOK_SECRET,
+      "Stripe is not configured. Set STRIPE_WEBHOOK_SECRET in .env.",
+    ),
   );
 }
 

@@ -59,7 +59,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "VERIFICATION_FAILED" }, { status: 400 });
   }
 
-  const { credential } = result.registrationInfo;
+  const credentialId = Buffer.from(
+    result.registrationInfo.credentialID,
+  ).toString("base64url");
   const transports = Array.isArray(parsed.data.response?.response?.transports)
     ? (parsed.data.response.response.transports as string[]).join(",")
     : null;
@@ -67,16 +69,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   await prisma.authenticator.create({
     data: {
       userId: session.user.id,
-      credentialId: credential.id,
-      publicKey: Buffer.from(credential.publicKey),
-      counter: credential.counter,
+      credentialId,
+      publicKey: Buffer.from(result.registrationInfo.credentialPublicKey),
+      counter: result.registrationInfo.counter,
       transports,
       deviceName: parsed.data.deviceName ?? null,
     },
   });
   await deleteChallenge(session.user.id);
   logger.info(
-    { userId: session.user.id, credentialId: credential.id },
+    { userId: session.user.id, credentialId },
     "webauthn.register.verified",
   );
   return NextResponse.json({ ok: true });
