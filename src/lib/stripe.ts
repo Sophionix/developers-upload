@@ -29,10 +29,10 @@ function looksLikePlaceholder(key: string): boolean {
 
 export function getStripe(): Stripe {
   if (cached) return cached;
-  const key = env.STRIPE_SECRET_KEY;
+  const key = env.STRIPE_SECRET_KEY ?? "";
   if (looksLikePlaceholder(key)) throw new StripeNotConfiguredError();
   cached = new Stripe(key, {
-    apiVersion: env.STRIPE_API_VERSION as StripeApiVersion,
+    apiVersion: (env.STRIPE_API_VERSION ?? "2023-08-16") as StripeApiVersion,
   });
   return cached;
 }
