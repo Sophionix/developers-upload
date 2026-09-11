@@ -12,7 +12,11 @@ import {
   RateLimitedError,
   ValidationError,
 } from "@/lib/errors";
-import { getStripe, getOrCreateStripeCustomer } from "@/lib/stripe";
+import {
+  getStripe,
+  getOrCreateStripeCustomer,
+  getStripeCheckoutUrls,
+} from "@/lib/stripe";
 import { toPlanDto, type PlanDto } from "@/lib/dto/billing";
 import {
   toCurrentSubscriptionDto,
@@ -179,11 +183,12 @@ export async function createCheckoutSession(
     }
 
     const stripe = getStripe();
+    const { successUrl, cancelUrl } = getStripeCheckoutUrls();
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       line_items: [{ price: plan.stripePriceId, quantity: 1 }],
-      success_url: env.STRIPE_CHECKOUT_SUCCESS_URL,
-      cancel_url: env.STRIPE_CHECKOUT_CANCEL_URL,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       client_reference_id: user.id,
       customer: stripeCustomerId,
       ...(stripeCouponId && {
@@ -274,9 +279,10 @@ export async function createBillingPortalSession(
   if (!row?.stripeCustomerId) throw new NotFoundError("no_stripe_customer");
 
   const stripe = getStripe();
+  const { successUrl } = getStripeCheckoutUrls();
   const session = await stripe.billingPortal.sessions.create({
     customer: row.stripeCustomerId,
-    return_url: env.STRIPE_CHECKOUT_SUCCESS_URL,
+    return_url: successUrl,
   });
   logger.info({ userId: user.id }, "billing_portal_created");
   return { url: session.url };
