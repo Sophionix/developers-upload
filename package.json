@@ -43,7 +43,7 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@radix-ui/react-visually-hidden": "^1.2.4",
-    "@simplewebauthn/server": "^13.3.0",
+    "@simplewebauthn/server": "^9.0.2",
     "@tanstack/react-table": "^8.21.3",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
