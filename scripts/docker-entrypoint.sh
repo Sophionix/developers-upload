@@ -59,9 +59,13 @@ echo ""
 if [ "${SKIP_SEED:-}" = "true" ]; then
   echo "⏭️  SKIP_SEED=true — skipping seed"
 else
-  echo "🌱  Running Prisma seed..."
+ echo "🌱  Running Prisma seed..."
+if command -v prisma >/dev/null 2>&1; then
   prisma db seed
   echo "✅  Seed complete"
+else
+  echo "⚠️  Prisma CLI not available, skipping seed"
+fi
 fi
 echo ""
 
