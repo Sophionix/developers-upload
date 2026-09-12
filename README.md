@@ -75,7 +75,7 @@ Required for local dev:
 
 | Variable | Purpose |
 |---|---|
-| `DATABASE_URL` | Real MySQL connection string (`******host:3306/db`); blank or placeholder values are invalid |
+| `DATABASE_URL` | Real MySQL connection string (for example `mysql://USER:PASSWORD@HOST:3306/DB_NAME`); blank or placeholder values are invalid |
 | `AUTH_SECRET` | Session signing key (`openssl rand -base64 32`) |
 | `STRIPE_SECRET_KEY` | Stripe test secret key |
 | `STRIPE_WEBHOOK_SECRET` | Stripe CLI webhook secret |
