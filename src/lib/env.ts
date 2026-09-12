@@ -21,19 +21,6 @@ const floatString = (fallback?: number) => {
   return withDefault.transform((v) => Number.parseFloat(v));
 };
 
-const databaseUrlString = z
-  .string()
-  .trim()
-  .min(1, "must be set to a real mysql:// or mariadb:// connection string")
-  .refine((value) => {
-    try {
-      const url = new URL(value);
-      return url.protocol === "mysql:" || url.protocol === "mariadb:";
-    } catch {
-      return false;
-    }
-  }, "must be a valid mysql:// or mariadb:// connection string");
-
 const envSchema = z.object({
   // -- Runtime ----------------------------------------------------------------
   NODE_ENV: z
@@ -42,7 +29,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url(),
 
   // -- Database ---------------------------------------------------------------
-  DATABASE_URL: databaseUrlString.optional(),
+  DATABASE_URL: z.string().optional(),
 
   // -- Redis (optional — falls back to in-memory store when absent) ----------
   REDIS_URL: z.string().url().optional(),
