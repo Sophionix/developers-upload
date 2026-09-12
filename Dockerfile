@@ -42,8 +42,8 @@ COPY package.json yarn.lock ./
 # Install dependencies with immutable lockfile.
 # Uses BuildKit cache mount for Yarn's global cache.
 RUN --mount=type=cache,id=s/bc04795c-8b17-4355-bbcc-d0c99cd6b9c7-/usr/local/share/.cache/yarn,target=/usr/local/share/.cache/yarn \
+    yarn config set nodeLinker node-modules && \
     yarn install --immutable
-
 # -----------------------------------------------------------------------------
 # Stage 3 — Builder
 # -----------------------------------------------------------------------------
