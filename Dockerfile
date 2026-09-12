@@ -57,7 +57,6 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Generate Prisma client before build (required by tsc & Next.js)
-RUN yarn dlx prisma generate
 
 # Build Next.js standalone output
 RUN yarn build
