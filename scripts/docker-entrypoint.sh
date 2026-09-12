@@ -7,6 +7,7 @@ set -e
 # =============================================================================
 
 DB_WAIT_TIMEOUT="${DB_WAIT_TIMEOUT:-60}"
+PRISMA_BIN="${PRISMA_BIN:-/app/tools/node_modules/.bin/prisma}"
 
 echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"
@@ -48,7 +49,7 @@ if [ "${SKIP_MIGRATE:-}" = "true" ]; then
   echo "⏭️  SKIP_MIGRATE=true — skipping migrations"
 else
   echo "🔄  Running Prisma migrations..."
-  prisma migrate deploy
+  "$PRISMA_BIN" migrate deploy
   echo "✅  Migrations complete"
 fi
 echo ""
@@ -60,7 +61,7 @@ if [ "${SKIP_SEED:-}" = "true" ]; then
   echo "⏭️  SKIP_SEED=true — skipping seed"
 else
   echo "🌱  Running Prisma seed..."
-  prisma db seed
+  "$PRISMA_BIN" db seed
   echo "✅  Seed complete"
 fi
 echo ""
