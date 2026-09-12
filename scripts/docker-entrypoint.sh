@@ -6,8 +6,8 @@ set -e
 # Waits for MySQL/MariaDB, runs Prisma migrations, seeds, then starts app.
 # =============================================================================
 
-DB_HOST="${DB_HOST:-db}"
-DB_PORT="${DB_PORT:-3306}"
+DB_HOST="${DB_HOST:-${MYSQLHOST:-db}}"
+DB_PORT="${DB_PORT:-${MYSQLPORT:-3306}}"
 DB_WAIT_TIMEOUT="${DB_WAIT_TIMEOUT:-60}"
 
 echo ""
