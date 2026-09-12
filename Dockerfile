@@ -76,15 +76,12 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser  --system --uid 1001 nextjs
 
 # --- Copy Next.js standalone output -----------------------------------------
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static     ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public            ./public
 
 # --- Copy Prisma artefacts for runtime migrations & seeding -----------------
 # Schema, migrations, seed script, config, and generated client
 COPY --from=builder --chown=nextjs:nodejs /app/prisma             ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts   ./prisma.config.ts
-COPY --from=builder --chown=nextjs:nodejs /app/src/generated/prisma ./src/generated/prisma
 
 # --- Install migration tooling in isolated directory ------------------------
 # We install Prisma CLI + tsx here so the runner can execute
