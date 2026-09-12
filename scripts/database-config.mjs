@@ -282,25 +282,40 @@ function resolveExplicitGroup(env, group, target) {
  * @param {"startup" | "connection"} target
  */
 function resolveDatabaseConfig(env, target) {
+  const collectedIssues = [];
+
   for (const urlVar of ["DATABASE_URL", "MYSQL_URL"]) {
-    const config = resolveUrlConfig(env, urlVar, target);
-    if (config) return config;
+    if (!readEnv(env, urlVar)) continue;
+
+    try {
+      return resolveUrlConfig(env, urlVar, target);
+    } catch (error) {
+      if (!(error instanceof DatabaseConfigError)) throw error;
+      collectedIssues.push(...error.issues);
+    }
   }
 
   for (const group of EXPLICIT_GROUPS) {
-    const config = resolveExplicitGroup(env, group, target);
-    if (config) return config;
+    try {
+      const config = resolveExplicitGroup(env, group, target);
+      if (!config) continue;
+      return config;
+    } catch (error) {
+      if (!(error instanceof DatabaseConfigError)) throw error;
+      collectedIssues.push(...error.issues);
+    }
   }
 
-  throw new DatabaseConfigError(
+  const guidance =
     target === "startup"
-      ? [
-          "Provide DATABASE_URL or MYSQL_URL, or set DB_HOST/DB_PORT, or set MYSQLHOST/MYSQLPORT",
-        ]
-      : [
-          "Provide DATABASE_URL or MYSQL_URL, or set DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME, or set MYSQLHOST/MYSQLPORT/MYSQLUSER/MYSQLPASSWORD/MYSQLDATABASE",
-        ],
-  );
+      ? "Provide DATABASE_URL or MYSQL_URL, or set DB_HOST/DB_PORT, or set MYSQLHOST/MYSQLPORT"
+      : "Provide DATABASE_URL or MYSQL_URL, or set DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME, or set MYSQLHOST/MYSQLPORT/MYSQLUSER/MYSQLPASSWORD/MYSQLDATABASE";
+
+  if (collectedIssues.length === 0) {
+    throw new DatabaseConfigError([guidance]);
+  }
+
+  throw new DatabaseConfigError([...collectedIssues, guidance]);
 }
 
 /**
