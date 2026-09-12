@@ -119,6 +119,20 @@ function parsePortValue(value, varName, issues) {
 }
 
 /**
+ * @param {string} value
+ * @param {string} varName
+ * @param {string[]} issues
+ */
+function decodeUrlComponent(value, varName, issues) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    issues.push(`${varName} must use valid percent-encoding`);
+    return undefined;
+  }
+}
+
+/**
  * @param {URL} url
  * @param {string} sourceVar
  * @param {"startup" | "connection"} target
@@ -150,18 +164,26 @@ function validateUrlConfig(url, sourceVar, target) {
     return config;
   }
 
+  const decodedUsername = decodeUrlComponent(url.username, `${sourceVar} username`, issues);
+  const decodedPassword = decodeUrlComponent(url.password, `${sourceVar} password`, issues);
+  const decodedDatabase = decodeUrlComponent(
+    url.pathname.replace(/^\//, ""),
+    `${sourceVar} database`,
+    issues,
+  );
+
   const user = validateRequiredValue(
-    decodeURIComponent(url.username),
+    decodedUsername,
     `${sourceVar} username`,
     issues,
   );
   const password = validateRequiredValue(
-    decodeURIComponent(url.password),
+    decodedPassword,
     `${sourceVar} password`,
     issues,
   );
   const database = validateRequiredValue(
-    url.pathname ? decodeURIComponent(url.pathname.replace(/^\//, "")) : undefined,
+    decodedDatabase,
     `${sourceVar} database`,
     issues,
   );

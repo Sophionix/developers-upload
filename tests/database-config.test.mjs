@@ -106,3 +106,21 @@ test("uses MYSQL_URL when DATABASE_URL is absent", () => {
   assert.equal(config.password, "mysql_pass");
   assert.equal(config.database, "mysql_url_db");
 });
+
+test("decodes percent-encoded URL credentials and database names", () => {
+  const databaseUrl = new URL("mysql://encoded.internal:3312/");
+  databaseUrl.username = "user name";
+  databaseUrl.password = "p@ss word";
+  databaseUrl.pathname = "/app db";
+
+  const config = resolveDatabaseConnectionConfig({
+    DATABASE_URL: databaseUrl.toString(),
+  });
+
+  assert.equal(config.source, "DATABASE_URL");
+  assert.equal(config.host, "encoded.internal");
+  assert.equal(config.port, 3312);
+  assert.equal(config.user, "user name");
+  assert.equal(config.password, "p@ss word");
+  assert.equal(config.database, "app db");
+});
