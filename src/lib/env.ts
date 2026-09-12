@@ -1,8 +1,4 @@
 import { z } from "zod";
-import {
-  buildDatabaseConnectionUrl,
-  resolveDatabaseConnectionConfig,
-} from "../../scripts/database-config.mjs";
 
 const boolish = (fallback?: boolean) => {
   const base = z.enum(["true", "false", "1", "0"]);
@@ -33,18 +29,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url(),
 
   // -- Database ---------------------------------------------------------------
-  DATABASE_URL: z.string().min(1).optional(),
-  MYSQL_URL: z.string().min(1).optional(),
-  DB_HOST: z.string().min(1).optional(),
-  DB_PORT: z.string().min(1).optional(),
-  DB_USER: z.string().min(1).optional(),
-  DB_PASSWORD: z.string().min(1).optional(),
-  DB_NAME: z.string().min(1).optional(),
-  MYSQLHOST: z.string().min(1).optional(),
-  MYSQLPORT: z.string().min(1).optional(),
-  MYSQLUSER: z.string().min(1).optional(),
-  MYSQLPASSWORD: z.string().min(1).optional(),
-  MYSQLDATABASE: z.string().min(1).optional(),
+  DATABASE_URL: z.string().optional(),
 
   // -- Redis (optional — falls back to in-memory store when absent) ----------
   REDIS_URL: z.string().url().optional(),
@@ -110,7 +95,7 @@ const envSchema = z.object({
 });
 
 type ParsedEnv = z.infer<typeof envSchema>;
-export type Env = ParsedEnv & { DATABASE_URL: string };
+export type Env = ParsedEnv;
 
 export function parseEnv(source: Record<string, string | undefined>): Env {
   const result = envSchema.safeParse(source);
@@ -121,12 +106,7 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
     throw new Error(`Invalid environment:\n  ${issues}`);
   }
 
-  const databaseConfig = resolveDatabaseConnectionConfig(result.data);
-
-  return {
-    ...result.data,
-    DATABASE_URL: buildDatabaseConnectionUrl(databaseConfig),
-  };
+  return result.data;
 }
 
 let cached: Env | undefined;

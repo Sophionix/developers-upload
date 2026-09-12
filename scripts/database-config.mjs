@@ -2,44 +2,9 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const DEFAULT_MYSQL_PORT = 3306;
-const PLACEHOLDER_LITERALS = new Set([
-  "DATABASE_URL",
-  "MYSQL_URL",
-  "MYSQLHOST",
-  "MYSQLPORT",
-  "MYSQLUSER",
-  "MYSQLPASSWORD",
-  "MYSQLDATABASE",
-  "DB_HOST",
-  "DB_PORT",
-  "DB_USER",
-  "DB_PASSWORD",
-  "DB_NAME",
-  "MYSQL",
-  "MYSQLSERVICE",
-  "MYSQLSERVICE_NAME",
-  "MYSQLSERVICEHOST",
-  "MYSQLSERVICEPORT",
-]);
-
-const EXPLICIT_GROUPS = [
-  {
-    name: "DB_*",
-    hostVar: "DB_HOST",
-    portVar: "DB_PORT",
-    userVar: "DB_USER",
-    passwordVar: "DB_PASSWORD",
-    databaseVar: "DB_NAME",
-  },
-  {
-    name: "MYSQL*",
-    hostVar: "MYSQLHOST",
-    portVar: "MYSQLPORT",
-    userVar: "MYSQLUSER",
-    passwordVar: "MYSQLPASSWORD",
-    databaseVar: "MYSQLDATABASE",
-  },
-];
+const MISSING_DATABASE_URL_MESSAGE =
+  "Set DATABASE_URL to a real mysql:// or mariadb:// connection string before starting the app";
+const PLACEHOLDER_LITERALS = new Set(["DATABASE_URL", "MYSQL_URL"]);
 
 export class DatabaseConfigError extends Error {
   /**
@@ -69,6 +34,14 @@ function readEnv(env, key) {
 function isPlaceholderLiteral(value) {
   if (!value) return false;
   return PLACEHOLDER_LITERALS.has(value.trim().toUpperCase());
+}
+
+/**
+ * @param {string | undefined} value
+ */
+function isPlaceholderExpression(value) {
+  if (!value) return false;
+  return /^\$\{\{.+\}\}$|^\$\{.+\}$/.test(value.trim());
 }
 
 /**
@@ -206,9 +179,9 @@ function validateUrlConfig(url, sourceVar, target) {
 function resolveUrlConfig(env, sourceVar, target) {
   const raw = readEnv(env, sourceVar);
   if (!raw) return undefined;
-  if (isPlaceholderLiteral(raw)) {
+  if (isPlaceholderLiteral(raw) || isPlaceholderExpression(raw)) {
     throw new DatabaseConfigError([
-      `${sourceVar} must not be the placeholder literal ${quoteValue(raw)}`,
+      `${sourceVar} must be a real mysql:// or mariadb:// connection string, received unresolved placeholder ${quoteValue(raw)}`,
     ]);
   }
 
@@ -224,82 +197,18 @@ function resolveUrlConfig(env, sourceVar, target) {
 
 /**
  * @param {Record<string, string | undefined>} env
- * @param {(typeof EXPLICIT_GROUPS)[number]} group
- * @param {"startup" | "connection"} target
- */
-function resolveExplicitGroup(env, group, target) {
-  const values = {
-    host: readEnv(env, group.hostVar),
-    port: readEnv(env, group.portVar),
-    user: readEnv(env, group.userVar),
-    password: readEnv(env, group.passwordVar),
-    database: readEnv(env, group.databaseVar),
-  };
-
-  if (Object.values(values).every((value) => value === undefined)) {
-    return undefined;
-  }
-
-  const issues = [];
-  const host = validateRequiredValue(values.host, group.hostVar, issues);
-  const port = parsePortValue(values.port, group.portVar, issues);
-
-  if (target === "startup") {
-    if (issues.length > 0) throw new DatabaseConfigError(issues);
-    return {
-      source: group.name,
-      sourceDescription: values.port ? `${group.hostVar}/${group.portVar}` : `${group.hostVar} + default ${DEFAULT_MYSQL_PORT}`,
-      host,
-      port,
-      connectionLimit: undefined,
-      allowPublicKeyRetrieval: undefined,
-      ssl: undefined,
-    };
-  }
-
-  const user = validateRequiredValue(values.user, group.userVar, issues);
-  const password = validateRequiredValue(values.password, group.passwordVar, issues);
-  const database = validateRequiredValue(values.database, group.databaseVar, issues);
-
-  if (issues.length > 0) throw new DatabaseConfigError(issues);
-
-  return {
-    source: group.name,
-    sourceDescription: values.port ? `${group.hostVar}/${group.portVar}` : `${group.hostVar} + default ${DEFAULT_MYSQL_PORT}`,
-    host,
-    port,
-    user,
-    password,
-    database,
-    connectionLimit: undefined,
-    allowPublicKeyRetrieval: undefined,
-    ssl: undefined,
-  };
-}
-
-/**
- * @param {Record<string, string | undefined>} env
  * @param {"startup" | "connection"} target
  */
 function resolveDatabaseConfig(env, target) {
-  for (const urlVar of ["DATABASE_URL", "MYSQL_URL"]) {
-    const config = resolveUrlConfig(env, urlVar, target);
-    if (config) return config;
-  }
-
-  for (const group of EXPLICIT_GROUPS) {
-    const config = resolveExplicitGroup(env, group, target);
-    if (config) return config;
-  }
+  const config = resolveUrlConfig(env, "DATABASE_URL", target);
+  if (config) return config;
 
   throw new DatabaseConfigError(
-    target === "startup"
-      ? [
-          "Provide DATABASE_URL or MYSQL_URL, or set DB_HOST/DB_PORT, or set MYSQLHOST/MYSQLPORT",
-        ]
-      : [
-          "Provide DATABASE_URL or MYSQL_URL, or set DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME, or set MYSQLHOST/MYSQLPORT/MYSQLUSER/MYSQLPASSWORD/MYSQLDATABASE",
-        ],
+    [
+      target === "startup"
+        ? MISSING_DATABASE_URL_MESSAGE
+        : "Set DATABASE_URL to a real mysql:// or mariadb:// connection string before running database operations",
+    ],
   );
 }
 

@@ -13,11 +13,8 @@
 #     (We do not need to delete it — `docker compose up` only starts
 #     services that are either named on the CLI, in the default profile,
 #     or required via depends_on.)
-#   - DATABASE_URL is supplied from .env and the inline override is left
-#     in the base file; the env-file value wins because we re-declare
-#     DATABASE_URL here pointing at ${DATABASE_URL} from .env.
-#   - DB_HOST is set so the entrypoint's `nc -z $DB_HOST $DB_PORT` probes
-#     the managed database instead of the in-cluster `db` hostname.
+#   - DATABASE_URL is supplied from .env and must be a real, fully expanded
+#     mysql:// or mariadb:// connection string for the managed database.
 # =============================================================================
 
 services:
@@ -36,8 +33,6 @@ services:
       redis:
         condition: service_healthy
     environment:
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT:-3306}
       DATABASE_URL: ${DATABASE_URL}
 
   worker:
@@ -47,6 +42,4 @@ services:
       app:
         condition: service_healthy
     environment:
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT:-3306}
       DATABASE_URL: ${DATABASE_URL}
