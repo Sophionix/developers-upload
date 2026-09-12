@@ -6,8 +6,6 @@ set -e
 # Waits for MySQL/MariaDB, runs Prisma migrations, seeds, then starts app.
 # =============================================================================
 
-DB_HOST="${DB_HOST:-${MYSQLHOST:-db}}"
-DB_PORT="${DB_PORT:-${MYSQLPORT:-3306}}"
 DB_WAIT_TIMEOUT="${DB_WAIT_TIMEOUT:-60}"
 
 echo ""
@@ -19,7 +17,16 @@ echo ""
 # -----------------------------------------------------------------------------
 # 1. Wait for database
 # -----------------------------------------------------------------------------
-echo "⏳  Waiting for database at ${DB_HOST}:${DB_PORT} (timeout: ${DB_WAIT_TIMEOUT}s)..."
+RESOLVED_DB_CONFIG="$(node /app/scripts/database-config.mjs startup 2>&1)" || {
+  echo "❌  ${RESOLVED_DB_CONFIG}"
+  exit 1
+}
+
+DB_HOST="$(printf '%s' "$RESOLVED_DB_CONFIG" | cut -f1)"
+DB_PORT="$(printf '%s' "$RESOLVED_DB_CONFIG" | cut -f2)"
+DB_SOURCE="$(printf '%s' "$RESOLVED_DB_CONFIG" | cut -f3)"
+
+echo "⏳  Waiting for database at ${DB_HOST}:${DB_PORT} (source: ${DB_SOURCE}, timeout: ${DB_WAIT_TIMEOUT}s)..."
 
 wait_start=$(date +%s)
 while ! nc -z "$DB_HOST" "$DB_PORT" >/dev/null 2>&1; do

@@ -2,17 +2,16 @@ import bcrypt from "bcryptjs";
 import Stripe from "stripe";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { resolveDatabaseConnectionConfig } from "../scripts/database-config.mjs";
 
 function buildClient(): PrismaClient {
-  const raw = process.env.DATABASE_URL;
-  if (!raw) throw new Error("DATABASE_URL required for seed");
-  const url = new URL(raw);
+  const config = resolveDatabaseConnectionConfig(process.env);
   const adapter = new PrismaMariaDb({
-    host: url.hostname,
-    port: url.port ? Number.parseInt(url.port, 10) : 3306,
-    user: decodeURIComponent(url.username),
-    password: decodeURIComponent(url.password),
-    database: url.pathname.replace(/^\//, ""),
+    host: config.host,
+    port: config.port,
+    user: config.user,
+    password: config.password,
+    database: config.database,
     connectionLimit: 5,
   });
   return new PrismaClient({ adapter });
