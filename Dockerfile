@@ -59,7 +59,6 @@ COPY . .
 # Generate Prisma client before build (required by tsc & Next.js)
 
 # Build Next.js standalone output
-RUN yarn build
 
 # -----------------------------------------------------------------------------
 # Stage 4 — Production Runner
