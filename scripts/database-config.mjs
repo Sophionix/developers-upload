@@ -283,22 +283,15 @@ function resolveExplicitGroup(env, group, target) {
  */
 function resolveDatabaseConfig(env, target) {
   const collectedIssues = [];
-  const invalidSourceSummaries = [];
 
   for (const urlVar of ["DATABASE_URL", "MYSQL_URL"]) {
     if (!readEnv(env, urlVar)) continue;
 
     try {
-      const config = resolveUrlConfig(env, urlVar, target);
-      if (invalidSourceSummaries.length === 0) return config;
-      return {
-        ...config,
-        sourceDescription: `${config.sourceDescription}; ignored invalid sources: ${invalidSourceSummaries.join(", ")}`,
-      };
+      return resolveUrlConfig(env, urlVar, target);
     } catch (error) {
       if (!(error instanceof DatabaseConfigError)) throw error;
       collectedIssues.push(...error.issues);
-      invalidSourceSummaries.push(urlVar);
     }
   }
 
@@ -306,15 +299,10 @@ function resolveDatabaseConfig(env, target) {
     try {
       const config = resolveExplicitGroup(env, group, target);
       if (!config) continue;
-      if (invalidSourceSummaries.length === 0) return config;
-      return {
-        ...config,
-        sourceDescription: `${config.sourceDescription}; ignored invalid sources: ${invalidSourceSummaries.join(", ")}`,
-      };
+      return config;
     } catch (error) {
       if (!(error instanceof DatabaseConfigError)) throw error;
       collectedIssues.push(...error.issues);
-      invalidSourceSummaries.push(group.name);
     }
   }
 
