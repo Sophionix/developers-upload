@@ -142,6 +142,47 @@ test("uses MYSQL_PRIVATE_URL when DATABASE_URL is malformed", () => {
   assert.equal(config.sourceDescription, "MYSQL_PRIVATE_URL");
 });
 
+test("uses DATABASE_PRIVATE_URL before MYSQL_PRIVATE_URL when DATABASE_URL is malformed", () => {
+  const databasePrivateUrl = new URL("mysql://database.private.rlwy.net:3307/app");
+  databasePrivateUrl.username = "railway";
+  databasePrivateUrl.password = "pass";
+
+  const mysqlPrivateUrl = new URL("mysql://mysql.private.rlwy.net:3308/app");
+  mysqlPrivateUrl.username = "railway";
+  mysqlPrivateUrl.password = "pass";
+
+  const config = resolveDatabaseStartupConfig({
+    DATABASE_URL: "https:",
+    DATABASE_PRIVATE_URL: databasePrivateUrl.toString(),
+    MYSQL_PRIVATE_URL: mysqlPrivateUrl.toString(),
+  });
+
+  assert.equal(config.source, "DATABASE_PRIVATE_URL");
+  assert.equal(config.host, "database.private.rlwy.net");
+  assert.equal(config.port, 3307);
+});
+
+test("uses DATABASE_PUBLIC_URL before MYSQL_PUBLIC_URL when higher-priority URLs are invalid", () => {
+  const databasePublicUrl = new URL("mysql://database.public.rlwy.net:3309/app");
+  databasePublicUrl.username = "railway";
+  databasePublicUrl.password = "pass";
+
+  const mysqlPublicUrl = new URL("mysql://mysql.public.rlwy.net:3310/app");
+  mysqlPublicUrl.username = "railway";
+  mysqlPublicUrl.password = "pass";
+
+  const config = resolveDatabaseStartupConfig({
+    DATABASE_URL: "https:",
+    MYSQL_URL: "https://mysql.invalid",
+    DATABASE_PUBLIC_URL: databasePublicUrl.toString(),
+    MYSQL_PUBLIC_URL: mysqlPublicUrl.toString(),
+  });
+
+  assert.equal(config.source, "DATABASE_PUBLIC_URL");
+  assert.equal(config.host, "database.public.rlwy.net");
+  assert.equal(config.port, 3309);
+});
+
 test("reports each invalid source when no valid database config exists", () => {
   assert.throws(
     () =>
@@ -154,6 +195,21 @@ test("reports each invalid source when no valid database config exists", () => {
       error.message.includes('DATABASE_URL must use a mysql:// or mariadb:// URL, received "https:"') &&
       error.message.includes('MYSQL_URL must use a mysql:// or mariadb:// URL, received "https:"') &&
       error.message.includes("Provide DATABASE_URL or MYSQL_URL"),
+  );
+});
+
+test("requires credentials for connection config even when startup host/port are valid", () => {
+  assert.throws(
+    () =>
+      resolveDatabaseConnectionConfig({
+        DB_HOST: "db.example",
+        DB_PORT: "3306",
+      }),
+    (error) =>
+      error instanceof DatabaseConfigError &&
+      error.message.includes("DB_USER is required") &&
+      error.message.includes("DB_PASSWORD is required") &&
+      error.message.includes("DB_NAME is required"),
   );
 });
 
