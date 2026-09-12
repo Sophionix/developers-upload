@@ -1,3 +1,4 @@
+import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const DEFAULT_MYSQL_PORT = 3306;
@@ -302,7 +303,7 @@ export function buildDatabaseConnectionUrl(config) {
 
 const isMainModule =
   typeof process.argv[1] === "string" &&
-  import.meta.url === pathToFileURL(process.argv[1]).href;
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
 
 if (isMainModule) {
   const mode = process.argv[2] ?? "startup";
