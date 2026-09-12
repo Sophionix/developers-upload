@@ -17,8 +17,7 @@ echo ""
 # -----------------------------------------------------------------------------
 # 1. Wait for database
 # -----------------------------------------------------------------------------
-RESOLVED_DB_CONFIG="$(node /app/scripts/database-config.mjs startup 2>&1)" || {
-  echo "❌  ${RESOLVED_DB_CONFIG}"
+RESOLVED_DB_CONFIG="$(node /app/scripts/database-config.mjs startup)" || {
   exit 1
 }
 

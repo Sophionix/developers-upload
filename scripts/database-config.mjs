@@ -141,6 +141,9 @@ function validateUrlConfig(url, sourceVar, target) {
     host,
     port,
     sourceDescription: sourceVar,
+    connectionLimit: url.searchParams.get("connection_limit"),
+    allowPublicKeyRetrieval: url.searchParams.get("allowPublicKeyRetrieval"),
+    ssl: url.searchParams.get("ssl"),
   };
 
   if (target === "startup") {
@@ -226,6 +229,9 @@ function resolveExplicitGroup(env, group, target) {
       sourceDescription: values.port ? `${group.hostVar}/${group.portVar}` : `${group.hostVar} + default ${DEFAULT_MYSQL_PORT}`,
       host,
       port,
+      connectionLimit: undefined,
+      allowPublicKeyRetrieval: undefined,
+      ssl: undefined,
     };
   }
 
@@ -243,6 +249,9 @@ function resolveExplicitGroup(env, group, target) {
     user,
     password,
     database,
+    connectionLimit: undefined,
+    allowPublicKeyRetrieval: undefined,
+    ssl: undefined,
   };
 }
 

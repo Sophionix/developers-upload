@@ -1,20 +1,14 @@
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "@/generated/prisma/client";
-import {
-  buildDatabaseConnectionUrl,
-  resolveDatabaseConnectionConfig,
-} from "../../scripts/database-config.mjs";
+import { resolveDatabaseConnectionConfig } from "../../scripts/database-config.mjs";
 import { logger } from "./logger";
 
 const SLOW_QUERY_MS = 100;
 
 function createClient(): PrismaClient {
   const config = resolveDatabaseConnectionConfig(process.env);
-  const url = new URL(buildDatabaseConnectionUrl(config));
-
-  // Forward query params from the connection string (e.g. allowPublicKeyRetrieval, ssl)
-  const queryAllowPublicKey = url.searchParams.get("allowPublicKeyRetrieval");
-  const sslParam = url.searchParams.get("ssl");
+  const queryAllowPublicKey = config.allowPublicKeyRetrieval;
+  const sslParam = config.ssl;
 
   const adapter = new PrismaMariaDb({
     host: config.host,
@@ -22,7 +16,7 @@ function createClient(): PrismaClient {
     user: config.user,
     password: config.password,
     database: config.database,
-    connectionLimit: Number.parseInt(url.searchParams.get("connection_limit") ?? "10", 10),
+    connectionLimit: Number.parseInt(config.connectionLimit ?? "10", 10),
     allowPublicKeyRetrieval:
       queryAllowPublicKey == null ? true : queryAllowPublicKey === "true" || queryAllowPublicKey === "1",
     ...(sslParam == null ? {} : { ssl: sslParam === "true" || sslParam === "1" }),
