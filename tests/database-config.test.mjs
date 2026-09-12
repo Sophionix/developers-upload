@@ -123,8 +123,7 @@ test("falls back to MYSQL_URL when DATABASE_URL is set to a non-MySQL URL", () =
   assert.equal(config.user, "railway");
   assert.equal(config.password, "pass");
   assert.equal(config.database, "railway");
-  assert.match(config.sourceDescription, /ignored invalid sources: DATABASE_URL/);
-  assert.match(config.sourceDescription, /received "https:"/);
+  assert.equal(config.sourceDescription, "MYSQL_URL; ignored invalid sources: DATABASE_URL");
 });
 
 test("reports each invalid source when no valid database config exists", () => {

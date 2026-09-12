@@ -298,7 +298,7 @@ function resolveDatabaseConfig(env, target) {
     } catch (error) {
       if (!(error instanceof DatabaseConfigError)) throw error;
       collectedIssues.push(...error.issues);
-      invalidSourceSummaries.push(`${urlVar} (${error.issues[0] ?? "invalid value"})`);
+      invalidSourceSummaries.push(urlVar);
     }
   }
 
@@ -314,7 +314,7 @@ function resolveDatabaseConfig(env, target) {
     } catch (error) {
       if (!(error instanceof DatabaseConfigError)) throw error;
       collectedIssues.push(...error.issues);
-      invalidSourceSummaries.push(`${group.name} (${error.issues[0] ?? "invalid value"})`);
+      invalidSourceSummaries.push(group.name);
     }
   }
 
