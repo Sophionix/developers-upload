@@ -90,7 +90,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/scripts/database-config.mjs ./scr
 # polluting the standalone node_modules.
 RUN mkdir -p /app/tools && cd /app/tools && \
     yarn init -y 2>/dev/null && \
+    yarn config set nodeLinker node-modules 2>/dev/null && \
     yarn add prisma@7.7.0 tsx@4.21.0 2>/dev/null && \
+    test -x /app/tools/node_modules/.bin/prisma && \
     chown -R nextjs:nodejs /app/tools
 
 ENV PATH="/app/tools/node_modules/.bin:${PATH}"
