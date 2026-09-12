@@ -121,7 +121,7 @@ export function parseEnv(source: Record<string, string | undefined>): Env {
     throw new Error(`Invalid environment:\n  ${issues}`);
   }
 
-  const databaseConfig = resolveDatabaseConnectionConfig(source);
+  const databaseConfig = resolveDatabaseConnectionConfig(result.data);
 
   return {
     ...result.data,

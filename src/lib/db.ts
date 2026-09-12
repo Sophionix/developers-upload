@@ -21,7 +21,7 @@ function createClient(): PrismaClient {
     database: config.database,
     connectionLimit: Number.parseInt(url.searchParams.get("connection_limit") ?? "10", 10),
     allowPublicKeyRetrieval:
-      queryAllowPublicKey === "true" || queryAllowPublicKey === "1" || true,
+      queryAllowPublicKey == null ? true : queryAllowPublicKey === "true" || queryAllowPublicKey === "1",
     ...(sslParam && { ssl: sslParam === "true" || sslParam === "1" }),
   });
 
