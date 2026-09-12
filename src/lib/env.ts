@@ -33,18 +33,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url(),
 
   // -- Database ---------------------------------------------------------------
-  DATABASE_URL: z.string().min(1).optional(),
-  MYSQL_URL: z.string().min(1).optional(),
-  DB_HOST: z.string().min(1).optional(),
-  DB_PORT: z.string().min(1).optional(),
-  DB_USER: z.string().min(1).optional(),
-  DB_PASSWORD: z.string().min(1).optional(),
-  DB_NAME: z.string().min(1).optional(),
-  MYSQLHOST: z.string().min(1).optional(),
-  MYSQLPORT: z.string().min(1).optional(),
-  MYSQLUSER: z.string().min(1).optional(),
-  MYSQLPASSWORD: z.string().min(1).optional(),
-  MYSQLDATABASE: z.string().min(1).optional(),
+  DATABASE_URL: z.string().optional(),
 
   // -- Redis (optional — falls back to in-memory store when absent) ----------
   REDIS_URL: z.string().url().optional(),

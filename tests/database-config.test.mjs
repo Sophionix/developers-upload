@@ -8,17 +8,13 @@ import {
   resolveDatabaseStartupConfig,
 } from "../scripts/database-config.mjs";
 
-test("rejects placeholder literals before startup wait begins", () => {
+test("requires DATABASE_URL before startup wait begins", () => {
   assert.throws(
-    () =>
-      resolveDatabaseStartupConfig({
-        DB_HOST: "MYSQLHOST",
-        DB_PORT: "MYSQLPORT",
-      }),
+    () => resolveDatabaseStartupConfig({}),
     (error) =>
       error instanceof DatabaseConfigError &&
-      error.message.includes("DB_HOST") &&
-      error.message.includes("DB_PORT"),
+      error.message.includes("DATABASE_URL") &&
+      error.message.includes("real mysql:// or mariadb:// connection string"),
   );
 });
 
@@ -48,63 +44,43 @@ test("prefers a valid DATABASE_URL when present", () => {
   );
 });
 
-test("falls back to DB_HOST and DB_PORT when DATABASE_URL is absent", () => {
-  const config = resolveDatabaseConnectionConfig({
-    DB_HOST: "db.example",
-    DB_PORT: "3308",
-    DB_USER: "app",
-    DB_PASSWORD: "secret",
-    DB_NAME: "developers_upload",
-  });
-
-  assert.equal(config.source, "DB_*");
-  assert.equal(config.host, "db.example");
-  assert.equal(config.port, 3308);
-  assert.equal(config.user, "app");
-  assert.equal(config.database, "developers_upload");
+test("rejects blank DATABASE_URL values", () => {
+  assert.throws(
+    () =>
+      resolveDatabaseConnectionConfig({
+        DATABASE_URL: "   ",
+      }),
+    (error) =>
+      error instanceof DatabaseConfigError &&
+      error.message.includes("DATABASE_URL") &&
+      error.message.includes("real mysql:// or mariadb:// connection string"),
+  );
 });
 
-test("falls back to MYSQLHOST and MYSQLPORT when app-specific vars are absent", () => {
-  const config = resolveDatabaseConnectionConfig({
-    MYSQLHOST: "railway.internal",
-    MYSQLPORT: "3310",
-    MYSQLUSER: "railway",
-    MYSQLPASSWORD: "password",
-    MYSQLDATABASE: "railway_db",
-  });
-
-  assert.equal(config.source, "MYSQL*");
-  assert.equal(config.host, "railway.internal");
-  assert.equal(config.port, 3310);
-  assert.equal(config.user, "railway");
-  assert.equal(config.database, "railway_db");
+test("rejects unresolved placeholder DATABASE_URL values", () => {
+  assert.throws(
+    () =>
+      resolveDatabaseConnectionConfig({
+        DATABASE_URL: "${{MySQL.MYSQL_URL}}",
+      }),
+    (error) =>
+      error instanceof DatabaseConfigError &&
+      error.message.includes("unresolved placeholder"),
+  );
 });
 
-test("uses MYSQL_URL when DATABASE_URL is absent", () => {
-  const mysqlUrl = new URL("mysql://mysql-url.internal:3311/mysql_url_db");
-  mysqlUrl.username = "mysql_user";
-  mysqlUrl.password = "mysql_pass";
+test("does not fall back to MYSQL_URL when DATABASE_URL is absent", () => {
+  const mysqlUrl = ["mysql:", "//", "mysql-url.internal:3311/mysql_url_db"].join("");
 
-  const config = resolveDatabaseConnectionConfig({
-    MYSQL_URL: mysqlUrl.toString(),
-    DB_HOST: "ignored-db-host",
-    DB_PORT: "3306",
-    DB_USER: "ignored-db-user",
-    DB_PASSWORD: "ignored-db-password",
-    DB_NAME: "ignored-db-name",
-    MYSQLHOST: "ignored-mysql-host",
-    MYSQLPORT: "3307",
-    MYSQLUSER: "ignored-mysql-user",
-    MYSQLPASSWORD: "ignored-mysql-password",
-    MYSQLDATABASE: "ignored-mysql-db",
-  });
-
-  assert.equal(config.source, "MYSQL_URL");
-  assert.equal(config.host, "mysql-url.internal");
-  assert.equal(config.port, 3311);
-  assert.equal(config.user, "mysql_user");
-  assert.equal(config.password, "mysql_pass");
-  assert.equal(config.database, "mysql_url_db");
+  assert.throws(
+    () =>
+      resolveDatabaseConnectionConfig({
+        MYSQL_URL: mysqlUrl,
+      }),
+    (error) =>
+      error instanceof DatabaseConfigError &&
+      error.message.includes("Set DATABASE_URL"),
+  );
 });
 
 test("decodes percent-encoded URL credentials and database names", () => {
