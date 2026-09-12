@@ -4,7 +4,11 @@ import { pathToFileURL } from "node:url";
 const DEFAULT_MYSQL_PORT = 3306;
 const PLACEHOLDER_LITERALS = new Set([
   "DATABASE_URL",
+  "DATABASE_PRIVATE_URL",
+  "DATABASE_PUBLIC_URL",
   "MYSQL_URL",
+  "MYSQL_PRIVATE_URL",
+  "MYSQL_PUBLIC_URL",
   "MYSQLHOST",
   "MYSQLPORT",
   "MYSQLUSER",
@@ -21,6 +25,15 @@ const PLACEHOLDER_LITERALS = new Set([
   "MYSQLSERVICEHOST",
   "MYSQLSERVICEPORT",
 ]);
+
+const URL_SOURCE_VARS = [
+  "DATABASE_URL",
+  "MYSQL_URL",
+  "DATABASE_PRIVATE_URL",
+  "MYSQL_PRIVATE_URL",
+  "DATABASE_PUBLIC_URL",
+  "MYSQL_PUBLIC_URL",
+];
 
 const EXPLICIT_GROUPS = [
   {
@@ -216,6 +229,12 @@ function resolveUrlConfig(env, sourceVar, target) {
   try {
     url = new URL(raw);
   } catch {
+    const protocolOnlyMatch = raw.match(/^([a-z][a-z\d+.-]*:)$/i);
+    if (protocolOnlyMatch) {
+      throw new DatabaseConfigError([
+        `${sourceVar} must use a mysql:// or mariadb:// URL, received ${quoteValue(protocolOnlyMatch[1].toLowerCase())}`,
+      ]);
+    }
     throw new DatabaseConfigError([`${sourceVar} must be a valid database URL, received ${quoteValue(raw)}`]);
   }
 
@@ -284,7 +303,7 @@ function resolveExplicitGroup(env, group, target) {
 function resolveDatabaseConfig(env, target) {
   const collectedIssues = [];
 
-  for (const urlVar of ["DATABASE_URL", "MYSQL_URL"]) {
+  for (const urlVar of URL_SOURCE_VARS) {
     if (!readEnv(env, urlVar)) continue;
 
     try {
