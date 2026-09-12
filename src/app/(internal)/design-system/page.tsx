@@ -57,7 +57,9 @@ function SwatchTile({ swatch }: { swatch: Swatch }) {
 }
 
 export default function DesignSystemPage() {
-  if (process.env.NODE_ENV === "production") notFound();
+  // Hidden in production by default; set NEXT_PUBLIC_SHOW_INTERNAL=true to reveal for testing.
+  if (process.env.NODE_ENV === "production" && process.env.NEXT_PUBLIC_SHOW_INTERNAL !== "true")
+    notFound();
 
   return (
     <div className="relative min-h-dvh">
