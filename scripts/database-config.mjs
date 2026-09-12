@@ -282,25 +282,52 @@ function resolveExplicitGroup(env, group, target) {
  * @param {"startup" | "connection"} target
  */
 function resolveDatabaseConfig(env, target) {
+  const collectedIssues = [];
+  const invalidSourceSummaries = [];
+
   for (const urlVar of ["DATABASE_URL", "MYSQL_URL"]) {
-    const config = resolveUrlConfig(env, urlVar, target);
-    if (config) return config;
+    if (!readEnv(env, urlVar)) continue;
+
+    try {
+      const config = resolveUrlConfig(env, urlVar, target);
+      if (invalidSourceSummaries.length === 0) return config;
+      return {
+        ...config,
+        sourceDescription: `${config.sourceDescription}; ignored invalid sources: ${invalidSourceSummaries.join(", ")}`,
+      };
+    } catch (error) {
+      if (!(error instanceof DatabaseConfigError)) throw error;
+      collectedIssues.push(...error.issues);
+      invalidSourceSummaries.push(`${urlVar} (${error.issues[0] ?? "invalid value"})`);
+    }
   }
 
   for (const group of EXPLICIT_GROUPS) {
-    const config = resolveExplicitGroup(env, group, target);
-    if (config) return config;
+    try {
+      const config = resolveExplicitGroup(env, group, target);
+      if (!config) continue;
+      if (invalidSourceSummaries.length === 0) return config;
+      return {
+        ...config,
+        sourceDescription: `${config.sourceDescription}; ignored invalid sources: ${invalidSourceSummaries.join(", ")}`,
+      };
+    } catch (error) {
+      if (!(error instanceof DatabaseConfigError)) throw error;
+      collectedIssues.push(...error.issues);
+      invalidSourceSummaries.push(`${group.name} (${error.issues[0] ?? "invalid value"})`);
+    }
   }
 
-  throw new DatabaseConfigError(
+  const guidance =
     target === "startup"
-      ? [
-          "Provide DATABASE_URL or MYSQL_URL, or set DB_HOST/DB_PORT, or set MYSQLHOST/MYSQLPORT",
-        ]
-      : [
-          "Provide DATABASE_URL or MYSQL_URL, or set DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME, or set MYSQLHOST/MYSQLPORT/MYSQLUSER/MYSQLPASSWORD/MYSQLDATABASE",
-        ],
-  );
+      ? "Provide DATABASE_URL or MYSQL_URL, or set DB_HOST/DB_PORT, or set MYSQLHOST/MYSQLPORT"
+      : "Provide DATABASE_URL or MYSQL_URL, or set DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME, or set MYSQLHOST/MYSQLPORT/MYSQLUSER/MYSQLPASSWORD/MYSQLDATABASE";
+
+  if (collectedIssues.length === 0) {
+    throw new DatabaseConfigError([guidance]);
+  }
+
+  throw new DatabaseConfigError([...collectedIssues, guidance]);
 }
 
 /**

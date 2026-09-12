@@ -107,6 +107,41 @@ test("uses MYSQL_URL when DATABASE_URL is absent", () => {
   assert.equal(config.database, "mysql_url_db");
 });
 
+test("falls back to MYSQL_URL when DATABASE_URL is set to a non-MySQL URL", () => {
+  const mysqlUrl = new URL("mysql://shortline.proxy.rlwy.net:44760/railway");
+  mysqlUrl.username = "railway";
+  mysqlUrl.password = "pass";
+
+  const config = resolveDatabaseConnectionConfig({
+    DATABASE_URL: "https://example.up.railway.app",
+    MYSQL_URL: mysqlUrl.toString(),
+  });
+
+  assert.equal(config.source, "MYSQL_URL");
+  assert.equal(config.host, "shortline.proxy.rlwy.net");
+  assert.equal(config.port, 44760);
+  assert.equal(config.user, "railway");
+  assert.equal(config.password, "pass");
+  assert.equal(config.database, "railway");
+  assert.match(config.sourceDescription, /ignored invalid sources: DATABASE_URL/);
+  assert.match(config.sourceDescription, /received "https:"/);
+});
+
+test("reports each invalid source when no valid database config exists", () => {
+  assert.throws(
+    () =>
+      resolveDatabaseStartupConfig({
+        DATABASE_URL: "https://example.up.railway.app",
+        MYSQL_URL: "https://mysql.railway.internal",
+      }),
+    (error) =>
+      error instanceof DatabaseConfigError &&
+      error.message.includes('DATABASE_URL must use a mysql:// or mariadb:// URL, received "https:"') &&
+      error.message.includes('MYSQL_URL must use a mysql:// or mariadb:// URL, received "https:"') &&
+      error.message.includes("Provide DATABASE_URL or MYSQL_URL"),
+  );
+});
+
 test("decodes percent-encoded URL credentials and database names", () => {
   const databaseUrl = new URL("mysql://encoded.internal:3312/");
   databaseUrl.username = "user name";
