@@ -25,6 +25,11 @@ DB_HOST="$(printf '%s' "$RESOLVED_DB_CONFIG" | cut -f1)"
 DB_PORT="$(printf '%s' "$RESOLVED_DB_CONFIG" | cut -f2)"
 DB_SOURCE="$(printf '%s' "$RESOLVED_DB_CONFIG" | cut -f3)"
 
+RESOLVED_DATABASE_URL="$(node /app/scripts/database-config.mjs connection-url)" || {
+  exit 1
+}
+export DATABASE_URL="$RESOLVED_DATABASE_URL"
+
 echo "⏳  Waiting for database at ${DB_HOST}:${DB_PORT} (source: ${DB_SOURCE}, timeout: ${DB_WAIT_TIMEOUT}s)..."
 
 wait_start=$(date +%s)
@@ -44,12 +49,17 @@ echo ""
 # -----------------------------------------------------------------------------
 # 2. Prisma Migrate Deploy
 # -----------------------------------------------------------------------------
-if [ "${SKIP_MIGRATE:-}" = "true" ]; then
-  echo "⏭️  SKIP_MIGRATE=true — skipping migrations"
+if command -v prisma >/dev/null 2>&1; then
+  if [ "${SKIP_MIGRATE:-}" = "true" ]; then
+    echo "⏭️  SKIP_MIGRATE=true — skipping migrations"
+  else
+    echo "🔄  Running Prisma migrations..."
+    prisma migrate deploy
+    echo "✅  Migrations complete"
+  fi
 else
-  echo "🔄  Running Prisma migrations..."
-  prisma migrate deploy
-  echo "✅  Migrations complete"
+  echo "⏭️  Prisma CLI not found — skipping migrations and seed"
+  SKIP_SEED=true
 fi
 echo ""
 

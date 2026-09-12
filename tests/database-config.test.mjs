@@ -113,7 +113,7 @@ test("falls back to MYSQL_URL when DATABASE_URL is set to a non-MySQL URL", () =
   mysqlUrl.password = "pass";
 
   const config = resolveDatabaseConnectionConfig({
-    DATABASE_URL: "https://example.up.railway.app",
+    DATABASE_URL: "https:",
     MYSQL_URL: mysqlUrl.toString(),
   });
 
@@ -126,11 +126,27 @@ test("falls back to MYSQL_URL when DATABASE_URL is set to a non-MySQL URL", () =
   assert.equal(config.sourceDescription, "MYSQL_URL");
 });
 
+test("uses MYSQL_PRIVATE_URL when DATABASE_URL is malformed", () => {
+  const privateUrl = new URL("mysql://private.proxy.rlwy.net:3306/railway");
+  privateUrl.username = "railway";
+  privateUrl.password = "pass";
+
+  const config = resolveDatabaseStartupConfig({
+    DATABASE_URL: "https:",
+    MYSQL_PRIVATE_URL: privateUrl.toString(),
+  });
+
+  assert.equal(config.source, "MYSQL_PRIVATE_URL");
+  assert.equal(config.host, "private.proxy.rlwy.net");
+  assert.equal(config.port, 3306);
+  assert.equal(config.sourceDescription, "MYSQL_PRIVATE_URL");
+});
+
 test("reports each invalid source when no valid database config exists", () => {
   assert.throws(
     () =>
       resolveDatabaseStartupConfig({
-        DATABASE_URL: "https://example.up.railway.app",
+        DATABASE_URL: "https:",
         MYSQL_URL: "https://mysql.railway.internal",
       }),
     (error) =>
