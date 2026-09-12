@@ -91,7 +91,8 @@
     "typescript": "^5"
   },
   "resolutions": {
-    "@react-pdf/image": "3.0.4"
+    "@react-pdf/image": "3.0.4",
+    "next-auth/nodemailer": "9.1.1"
   },
   "dependenciesMeta": {
     "@auth/prisma-adapter@2.11.2": {
