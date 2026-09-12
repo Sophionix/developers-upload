@@ -33,7 +33,10 @@ const envSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url(),
 
   // -- Database ---------------------------------------------------------------
-  DATABASE_URL: z.string().optional(),
+  DATABASE_URL: z
+    .string()
+    .trim()
+    .min(1, "must be set to a real mysql:// or mariadb:// connection string"),
 
   // -- Redis (optional — falls back to in-memory store when absent) ----------
   REDIS_URL: z.string().url().optional(),
