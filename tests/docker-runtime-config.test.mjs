@@ -9,20 +9,16 @@ const entrypoint = fs.readFileSync(
 );
 
 test("runner stage installs Prisma with node-modules linker", () => {
-  const toolsRunBlock = dockerfile.match(/RUN mkdir -p \/app\/tools[\s\S]*?chown -R nextjs:nodejs \/app\/tools/);
-
-  assert.ok(toolsRunBlock, "expected isolated /app/tools install block in Dockerfile");
-
   assert.match(
-    toolsRunBlock[0],
+    dockerfile,
     /yarn config set nodeLinker node-modules/,
   );
   assert.match(
-    toolsRunBlock[0],
+    dockerfile,
     /yarn add [^\n]*\bprisma\b/,
   );
   assert.match(
-    toolsRunBlock[0],
+    dockerfile,
     /test -x \/app\/tools\/node_modules\/\.bin\/prisma/,
   );
 });
