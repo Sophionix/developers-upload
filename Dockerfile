@@ -89,7 +89,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts   ./prisma.confi
 # polluting the standalone node_modules.
 RUN mkdir -p /app/tools && cd /app/tools && \
     yarn init -y 2>/dev/null && \
-    yarn add prisma@7.7.0 tsx@4.21.0 --no-lockfile 2>/dev/null && \
+    yarn add prisma@7.7.0 tsx@4.21.0 2>/dev/null && \
     chown -R nextjs:nodejs /app/tools
 
 ENV PATH="/app/tools/node_modules/.bin:${PATH}"
