@@ -24,7 +24,7 @@ LABEL org.opencontainers.image.title="Sophionix" \
 # Install system dependencies:
 #   libc6-compat    : Required by Prisma on Alpine (musl compatibility)
 #   netcat-openbsd  : For database connectivity checks in entrypoint
-RUN apk add --no-cache libc6-compat netcat-openbsd
+RUN apk add --no-cache libc6-compat netcat-openbsd git
 
 # Enable Corepack and pin Yarn 4 for deterministic behaviour
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
