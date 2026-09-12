@@ -82,6 +82,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/public            ./public
 # Schema, migrations, seed script, config, and generated client
 COPY --from=builder --chown=nextjs:nodejs /app/prisma             ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts   ./prisma.config.ts
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/database-config.mjs ./scripts/database-config.mjs
 
 # --- Install migration tooling in isolated directory ------------------------
 # We install Prisma CLI + tsx here so the runner can execute
