@@ -79,3 +79,30 @@ test("falls back to MYSQLHOST and MYSQLPORT when app-specific vars are absent", 
   assert.equal(config.user, "railway");
   assert.equal(config.database, "railway_db");
 });
+
+test("uses MYSQL_URL when DATABASE_URL is absent", () => {
+  const mysqlUrl = new URL("mysql://mysql-url.internal:3311/mysql_url_db");
+  mysqlUrl.username = "mysql_user";
+  mysqlUrl.password = "mysql_pass";
+
+  const config = resolveDatabaseConnectionConfig({
+    MYSQL_URL: mysqlUrl.toString(),
+    DB_HOST: "ignored-db-host",
+    DB_PORT: "3306",
+    DB_USER: "ignored-db-user",
+    DB_PASSWORD: "ignored-db-password",
+    DB_NAME: "ignored-db-name",
+    MYSQLHOST: "ignored-mysql-host",
+    MYSQLPORT: "3307",
+    MYSQLUSER: "ignored-mysql-user",
+    MYSQLPASSWORD: "ignored-mysql-password",
+    MYSQLDATABASE: "ignored-mysql-db",
+  });
+
+  assert.equal(config.source, "MYSQL_URL");
+  assert.equal(config.host, "mysql-url.internal");
+  assert.equal(config.port, 3311);
+  assert.equal(config.user, "mysql_user");
+  assert.equal(config.password, "mysql_pass");
+  assert.equal(config.database, "mysql_url_db");
+});

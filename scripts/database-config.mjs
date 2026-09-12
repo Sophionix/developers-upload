@@ -148,12 +148,12 @@ function validateUrlConfig(url, sourceVar, target) {
   }
 
   const user = validateRequiredValue(
-    url.username ? decodeURIComponent(url.username) : undefined,
+    decodeURIComponent(url.username),
     `${sourceVar} username`,
     issues,
   );
   const password = validateRequiredValue(
-    url.password ? decodeURIComponent(url.password) : undefined,
+    decodeURIComponent(url.password),
     `${sourceVar} password`,
     issues,
   );
