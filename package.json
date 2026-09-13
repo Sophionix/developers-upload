@@ -1,5 +1,10 @@
 {
   "name": "developers-upload",
   "private": true,
-  "version": "0.0.0"
+  "version": "0.0.0",
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "start": "next start"
+  }
 }
