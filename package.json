@@ -14,7 +14,10 @@
   "dependencies": {
     "next": "^15.5.25",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "next-auth": "^4.24.11",
+    "@radix-ui/react-select": "^2.2.0",
+    "recharts": "^2.12.7"
   },
   "devDependencies": {
     "prisma": "^6.19.3",
