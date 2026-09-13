@@ -17,6 +17,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "prisma": "^6.0.0"
+    "prisma": "^6.19.3",
+    "typescript": "^5.8.2"
   }
 }
